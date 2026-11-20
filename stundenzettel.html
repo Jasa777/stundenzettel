@@ -127,6 +127,7 @@ function addRow(d = {}) {
   rowsEl.appendChild(tr);
   const set = (cls, val, ocr) => {
     const el = tr.querySelector('.' + cls);
+    if (!el) return;
     if (val === undefined || val === null || val === '') return;
     if (el.type === 'checkbox') el.checked = !!val; else el.value = val;
     if (ocr) el.classList.add('ocr');
