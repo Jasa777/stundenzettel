@@ -39,6 +39,9 @@ input.miss{background:var(--warn);border-color:var(--warn-ln)}
 .sum span{font-size:.85rem;color:var(--mut)}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .note{font-size:.85rem;color:var(--mut)}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:600;color:var(--pri)}
+textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%;margin:8px 0}
 @media print{body{background:#fff;color:#000}.noprint{display:none}section{border:0;padding:0}input{border:0;border-bottom:1px solid #999;border-radius:0;background:#fff!important}}
 </style>
 </head>
@@ -52,6 +55,11 @@ input.miss{background:var(--warn);border-color:var(--warn-ln)}
   <label class="btn" for="file">Foto aufnehmen oder Datei wählen</label>
   <input id="file" type="file" accept="image/*">
   <p id="status">Die Texterkennung läuft im Browser. Beim ersten Mal wird das Sprachpaket geladen (Internet nötig).</p>
+  <details>
+    <summary>Text einfügen (abgetippt oder von Claude abgelesen)</summary>
+    <textarea id="paste" rows="9" placeholder="Auftraggeber: Beispiel GmbH&#10;Auftragnehmer: Name&#10;Nacht: 30&#10;Wochenende: 30&#10;Feiertag: 100&#10;01.10.2026 07:30 11:30&#10;01.10.2026 13:15 18:15"></textarea>
+    <button id="pasteGo">Übernehmen</button>
+  </details>
 </section>
 
 <section>
@@ -233,18 +241,64 @@ function putRows(parsed) {
   });
 }
 
+async function prep(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(2.5, 2600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const x = c.getContext('2d');
+    x.drawImage(bmp, 0, 0, c.width, c.height);
+    const im = x.getImageData(0, 0, c.width, c.height), d = im.data;
+    const hist = new Uint32Array(256), n = c.width * c.height;
+    for (let i = 0; i < d.length; i += 4) { const g = (d[i]*.3 + d[i+1]*.59 + d[i+2]*.11) | 0; d[i] = g; hist[g]++; }
+    let acc = 0, lo = 0, hi = 255;
+    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n * .01) { lo = v; break; } }
+    acc = 0;
+    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n * .4) { hi = v; break; } }
+    for (let i = 0; i < d.length; i += 4) {
+      const v = Math.max(0, Math.min(255, (d[i] - lo) * 255 / Math.max(1, hi - lo)));
+      d[i] = d[i+1] = d[i+2] = v; d[i+3] = 255;
+    }
+    x.putImageData(im, 0, 0);
+    return c;
+  } catch (e) { return file; }
+}
+
+function applyText(text) {
+  const keys = { zeitraum:'zeitraum', auftraggeber:'auftraggeber', auftragnehmer:'auftragnehmer', bereich:'bereich', nacht:'zNacht', wochenende:'zWe', feiertag:'zFt' };
+  const rest = []; let heads = 0;
+  text.split('\n').forEach(l => {
+    const m = l.match(/^\s*(zeitraum|auftraggeber|auftragnehmer|bereich|nacht|wochenende|feiertag)[^:=]*[:=]\s*(.+?)\s*$/i);
+    if (m) {
+      const id = keys[m[1].toLowerCase()];
+      $(id).value = (id === 'zNacht' || id === 'zWe' || id === 'zFt') ? m[2].replace(/[^\d.,]/g, '').replace(',', '.') : m[2];
+      heads++;
+    } else rest.push(l);
+  });
+  const parsed = parseText(rest.join('\n'));
+  if (parsed.length) putRows(parsed);
+  calc(); save();
+  return { heads, rows: parsed.length };
+}
+$('pasteGo').onclick = () => {
+  const r = applyText($('paste').value);
+  $('status').textContent = r.rows + ' Einsatzzeile(n) und ' + r.heads + ' Kopffeld(er) übernommen. Grüne Felder bitte prüfen.';
+};
+
 $('file').addEventListener('change', async e => {
   const f = e.target.files[0];
   if (!f) return;
   const st = $('status');
   try {
     st.textContent = 'Erkennung startet …';
-    const res = await Tesseract.recognize(f, 'deu', {
+    const img = await prep(f);
+    const res = await Tesseract.recognize(img, 'deu', {
       logger: m => { if (m.status === 'recognizing text') st.textContent = 'Erkenne Text … ' + Math.round(m.progress * 100) + ' %'; }
     });
     const parsed = parseText(res.data.text);
     if (!parsed.length) {
-      st.textContent = 'Keine Einsatzzeiten erkannt. Bitte besser ausleuchten, gerade fotografieren, Zeiten als HH:MM schreiben, oder die Felder unten von Hand ausfüllen.';
+      st.textContent = 'Keine Einsatzzeiten erkannt. Bitte besser ausleuchten, gerade fotografieren, Zeiten als HH:MM schreiben, oder unter „Text einfügen“ die Zeiten eintragen bzw. die Felder unten von Hand ausfüllen.';
       return;
     }
     putRows(parsed);
