@@ -57,7 +57,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
   <p id="status">Die Texterkennung läuft im Browser. Beim ersten Mal wird das Sprachpaket geladen (Internet nötig).</p>
   <details>
     <summary>Text einfügen (abgetippt oder von Claude abgelesen)</summary>
-    <textarea id="paste" rows="9" placeholder="Auftraggeber: Beispiel GmbH&#10;Auftragnehmer: Name&#10;Nacht: 30&#10;Wochenende: 30&#10;Feiertag: 100&#10;01.10.2026 07:30 11:30&#10;01.10.2026 13:15 18:15"></textarea>
+    <textarea id="paste" rows="9" placeholder="Auftraggeber: Beispiel GmbH&#10;Auftragnehmer: Name&#10;Stundenlohn: 45,00&#10;Nacht: 30&#10;Wochenende: 30&#10;Feiertag: 100&#10;01.10.2026 07:30 11:30&#10;01.10.2026 13:15 18:15"></textarea>
     <button id="pasteGo">Übernehmen</button>
   </details>
 </section>
@@ -69,6 +69,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
     <label>Auftraggeber<input id="auftraggeber"></label>
     <label>Auftragnehmer<input id="auftragnehmer"></label>
     <label>Bereich / Station<input id="bereich"></label>
+    <label>Stundenlohn (€)<input id="lohn" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 45,00"></label>
     <label>Zuschlag Nacht (%)<input id="zNacht" type="number" min="0" step="0.5" value="25"></label>
     <label>Zuschlag Wochenende (%)<input id="zWe" type="number" min="0" step="0.5" value="25"></label>
     <label>Zuschlag Feiertag (%)<input id="zFt" type="number" min="0" step="0.5" value="100"></label>
@@ -79,7 +80,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
   <h2>Einsätze</h2>
   <div class="wrap">
   <table>
-    <thead><tr><th>Datum</th><th>von</th><th>bis</th><th>Pause (Min.)</th><th>Std.</th><th>Stundenlohn (€)</th><th>Nacht (Std.)</th><th>Wochenende</th><th>Feiertag</th></tr></thead>
+    <thead><tr><th>Datum</th><th>von</th><th>bis</th><th>Pause (Min.)</th><th>Std.</th><th>Nacht (Std.)</th><th>Wochenende</th><th>Feiertag</th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
   </div>
@@ -100,7 +101,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
     <div><strong id="sFt">0,00</strong><span>davon Feiertagsstunden</span></div>
     <div><strong id="sEuro">0,00 €</strong><span>Vergütung inkl. Zuschläge</span></div>
   </div>
-  <p class="note">Die Nachtstunden werden aus von/bis berechnet, die Pause bleibt dabei unberücksichtigt. Zuschläge werden auf den Stundenlohn der jeweiligen Stunden aufgeschlagen.</p>
+  <p class="note">Die Nachtstunden werden aus von/bis berechnet, die Pause bleibt dabei unberücksichtigt. Der Stundenlohn gilt für alle Zeilen, Zuschläge werden auf den Stundenlohn der jeweiligen Stunden aufgeschlagen.</p>
 </section>
 </main>
 
@@ -108,7 +109,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
 <script>
 const $ = id => document.getElementById(id);
 const rowsEl = $('rows');
-const HEAD = ['zeitraum','auftraggeber','auftragnehmer','bereich','zNacht','zWe','zFt'];
+const HEAD = ['zeitraum','auftraggeber','auftragnehmer','bereich','lohn','zNacht','zWe','zFt'];
 const fmt = n => n.toFixed(2).replace('.', ',');
 const mins = s => { if(!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
 
@@ -120,7 +121,6 @@ function addRow(d = {}) {
     <td><input class="b" type="time" aria-label="Arbeitszeit bis"></td>
     <td><input class="p" type="number" min="0" step="1" inputmode="numeric" aria-label="Pause in Minuten"></td>
     <td class="n h">–</td>
-    <td><input class="l" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Stundenlohn"></td>
     <td class="n nt">–</td>
     <td class="c"><input class="we" type="checkbox" aria-label="Wochenende"></td>
     <td class="c"><input class="ft" type="checkbox" aria-label="Feiertag"></td>`;
@@ -139,12 +139,12 @@ function addRow(d = {}) {
 function calc() {
   const z = id => (parseFloat($(id).value) || 0) / 100;
   let T = 0, N = 0, W = 0, F = 0, E = 0;
+  const lohn = parseFloat($('lohn').value) || 0;
   rowsEl.querySelectorAll('tr').forEach(tr => {
     const q = c => tr.querySelector('.' + c);
     const v = mins(q('v').value), b = mins(q('b').value);
     const pause = parseFloat(q('p').value) || 0;
-    const lohn = parseFloat(q('l').value) || 0;
-    const any = ['d','v','b','p','l'].some(c => q(c).value) || q('we').checked || q('ft').checked;
+        const any = ['d','v','b','p'].some(c => q(c).value) || q('we').checked || q('ft').checked;
     q('v').classList.toggle('miss', any && v === null);
     q('b').classList.toggle('miss', any && b === null);
     let h = 0, nacht = 0;
@@ -172,7 +172,7 @@ function save() {
     const head = {}; HEAD.forEach(k => head[k] = $(k).value);
     const rows = [...rowsEl.querySelectorAll('tr')].map(tr => {
       const o = {};
-      ['d','v','b','p','l'].forEach(c => o[c] = tr.querySelector('.' + c).value);
+      ['d','v','b','p'].forEach(c => o[c] = tr.querySelector('.' + c).value);
       o.we = tr.querySelector('.we').checked; o.ft = tr.querySelector('.ft').checked;
       return o;
     });
@@ -197,7 +197,7 @@ $('add').onclick = () => { addRow(); calc(); };
 $('print').onclick = () => window.print();
 $('reset').onclick = () => {
   if (!confirm('Wirklich alle Einträge löschen?')) return;
-  rowsEl.innerHTML = ''; HEAD.slice(0, 4).forEach(k => $(k).value = '');
+  rowsEl.innerHTML = ''; HEAD.slice(0, 5).forEach(k => $(k).value = '');
   for (let i = 0; i < 10; i++) addRow();
   calc(); save();
 };
@@ -223,8 +223,6 @@ function parseText(text) {
     }
     row.v = `${pad(t[0][1])}:${t[0][2]}`;
     if (t[1]) row.b = `${pad(t[1][1])}:${t[1][2]}`;
-    const lohn = rest.match(/(?<!\d)\d{1,3}[,.]\d{2}(?!\d)/);
-    if (lohn) { row.l = lohn[0].replace(',', '.'); rest = rest.replace(lohn[0], ' '); }
     const p = rest.match(/(?<![\d,.])\d{1,3}(?![\d,.])/);
     if (p && +p[0] <= 180) row.p = p[0];
     out.push(row);
@@ -234,7 +232,7 @@ function parseText(text) {
 
 function putRows(parsed) {
   const empty = () => [...rowsEl.querySelectorAll('tr')].find(tr =>
-    !['d','v','b','p','l'].some(c => tr.querySelector('.' + c).value));
+    !['d','v','b','p'].some(c => tr.querySelector('.' + c).value));
   parsed.forEach(r => {
     const tr = empty();
     const nr = addRow(r);
@@ -267,13 +265,13 @@ async function prep(file) {
 }
 
 function applyText(text) {
-  const keys = { zeitraum:'zeitraum', auftraggeber:'auftraggeber', auftragnehmer:'auftragnehmer', bereich:'bereich', nacht:'zNacht', wochenende:'zWe', feiertag:'zFt' };
+  const keys = { zeitraum:'zeitraum', auftraggeber:'auftraggeber', auftragnehmer:'auftragnehmer', bereich:'bereich', nacht:'zNacht', wochenende:'zWe', feiertag:'zFt', stundenlohn:'lohn' };
   const rest = []; let heads = 0;
   text.split('\n').forEach(l => {
-    const m = l.match(/^\s*(zeitraum|auftraggeber|auftragnehmer|bereich|nacht|wochenende|feiertag)[^:=]*[:=]\s*(.+?)\s*$/i);
+    const m = l.match(/^\s*(zeitraum|auftraggeber|auftragnehmer|bereich|stundenlohn|nacht|wochenende|feiertag)[^:=]*[:=]\s*(.+?)\s*$/i);
     if (m) {
       const id = keys[m[1].toLowerCase()];
-      $(id).value = (id === 'zNacht' || id === 'zWe' || id === 'zFt') ? m[2].replace(/[^\d.,]/g, '').replace(',', '.') : m[2];
+      $(id).value = (id === 'zNacht' || id === 'zWe' || id === 'zFt' || id === 'lohn') ? m[2].replace(/[^\d.,]/g, '').replace(',', '.') : m[2];
       heads++;
     } else rest.push(l);
   });
