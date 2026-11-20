@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stundenzettel</title>
+<style>
+:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--warn:#FFF0C7;--warn-ln:#D9A400;--ocr:#DFF1EE;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--warn:#4A3B0A;--warn-ln:#D9A400;--ocr:#16403F;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.7rem;margin:8px 0 2px;letter-spacing:-.01em}
+.sub{color:var(--mut);margin:0 0 16px}
+section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 10px}
+button,.btn{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:10px 16px;cursor:pointer;display:inline-block}
+button.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
+button:focus-visible,.btn:focus-within,input:focus-visible{outline:3px solid var(--warn-ln);outline-offset:1px}
+#file{position:absolute;opacity:0;width:1px;height:1px}
+#status{margin:10px 0 0;color:var(--mut);min-height:1.4em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{display:block;font-size:.88rem;color:var(--mut)}
+input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font-size:.82rem;text-align:left;color:var(--mut);font-weight:600;padding:4px 4px 6px}
+td{padding:3px 3px}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:8px}
+td.c{text-align:center}
+td.c input{width:20px;height:20px}
+input.ocr{background:var(--ocr)}
+input.miss{background:var(--warn);border-color:var(--warn-ln)}
+.legend{font-size:.85rem;color:var(--mut);margin:8px 0 0}
+.legend b{padding:1px 8px;border-radius:4px;font-weight:400;color:var(--ink)}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.sum div{border:1px solid var(--line);border-radius:8px;padding:10px}
+.sum strong{display:block;font-size:1.35rem;font-variant-numeric:tabular-nums}
+.sum span{font-size:.85rem;color:var(--mut)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.note{font-size:.85rem;color:var(--mut)}
+@media print{body{background:#fff;color:#000}.noprint{display:none}section{border:0;padding:0}input{border:0;border-bottom:1px solid #999;border-radius:0;background:#fff!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Stundenzettel</h1>
+<p class="sub">Zettel fotografieren oder hochladen, Erkennung prüfen, fehlende Felder ergänzen.</p>
+
+<section class="noprint">
+  <h2>Ausgefüllten Zettel einlesen</h2>
+  <label class="btn" for="file">Foto aufnehmen oder Datei wählen</label>
+  <input id="file" type="file" accept="image/*">
+  <p id="status">Die Texterkennung läuft im Browser. Beim ersten Mal wird das Sprachpaket geladen (Internet nötig).</p>
+</section>
+
+<section>
+  <h2>Kopf</h2>
+  <div class="grid">
+    <label>Zeitraum<input id="zeitraum" placeholder="z. B. 03.11.–16.11.2026"></label>
+    <label>Auftraggeber<input id="auftraggeber"></label>
+    <label>Auftragnehmer<input id="auftragnehmer"></label>
+    <label>Bereich / Station<input id="bereich"></label>
+    <label>Zuschlag Nacht (%)<input id="zNacht" type="number" min="0" step="0.5" value="25"></label>
+    <label>Zuschlag Wochenende (%)<input id="zWe" type="number" min="0" step="0.5" value="25"></label>
+    <label>Zuschlag Feiertag (%)<input id="zFt" type="number" min="0" step="0.5" value="100"></label>
+  </div>
+</section>
+
+<section>
+  <h2>Einsätze</h2>
+  <div class="wrap">
+  <table>
+    <thead><tr><th>Datum</th><th>von</th><th>bis</th><th>Pause (Min.)</th><th>Std.</th><th>Stundenlohn (€)</th><th>Nacht (Std.)</th><th>Wochenende</th><th>Feiertag</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  </div>
+  <p class="legend noprint"><b style="background:var(--ocr)">grün</b> von der Texterkennung eingetragen, bitte prüfen &nbsp; <b style="background:var(--warn)">gelb</b> fehlt noch</p>
+  <div class="actions noprint">
+    <button class="sec" id="add">Zeile hinzufügen</button>
+    <button class="sec" id="print">Drucken</button>
+    <button class="sec" id="reset">Alles leeren</button>
+  </div>
+</section>
+
+<section>
+  <h2>Summen</h2>
+  <div class="sum">
+    <div><strong id="sTotal">0,00</strong><span>Arbeitsstunden</span></div>
+    <div><strong id="sNacht">0,00</strong><span>davon Nachtstunden (20–06 Uhr)</span></div>
+    <div><strong id="sWe">0,00</strong><span>davon Wochenendstunden</span></div>
+    <div><strong id="sFt">0,00</strong><span>davon Feiertagsstunden</span></div>
+    <div><strong id="sEuro">0,00 €</strong><span>Vergütung inkl. Zuschläge</span></div>
+  </div>
+  <p class="note">Die Nachtstunden werden aus von/bis berechnet, die Pause bleibt dabei unberücksichtigt. Zuschläge werden auf den Stundenlohn der jeweiligen Stunden aufgeschlagen.</p>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const rowsEl = $('rows');
+const HEAD = ['zeitraum','auftraggeber','auftragnehmer','bereich','zNacht','zWe','zFt'];
+const fmt = n => n.toFixed(2).replace('.', ',');
+const mins = s => { if(!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
+
+function addRow(d = {}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="d" placeholder="TT.MM.JJJJ" inputmode="numeric" aria-label="Datum"></td>
+    <td><input class="v" type="time" aria-label="Arbeitszeit von"></td>
+    <td><input class="b" type="time" aria-label="Arbeitszeit bis"></td>
+    <td><input class="p" type="number" min="0" step="1" inputmode="numeric" aria-label="Pause in Minuten"></td>
+    <td class="n h">–</td>
+    <td><input class="l" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Stundenlohn"></td>
+    <td class="n nt">–</td>
+    <td class="c"><input class="we" type="checkbox" aria-label="Wochenende"></td>
+    <td class="c"><input class="ft" type="checkbox" aria-label="Feiertag"></td>`;
+  rowsEl.appendChild(tr);
+  const set = (cls, val, ocr) => {
+    const el = tr.querySelector('.' + cls);
+    if (val === undefined || val === null || val === '') return;
+    if (el.type === 'checkbox') el.checked = !!val; else el.value = val;
+    if (ocr) el.classList.add('ocr');
+  };
+  for (const k in d) set(k, d[k], d._ocr);
+  return tr;
+}
+
+function calc() {
+  const z = id => (parseFloat($(id).value) || 0) / 100;
+  let T = 0, N = 0, W = 0, F = 0, E = 0;
+  rowsEl.querySelectorAll('tr').forEach(tr => {
+    const q = c => tr.querySelector('.' + c);
+    const v = mins(q('v').value), b = mins(q('b').value);
+    const pause = parseFloat(q('p').value) || 0;
+    const lohn = parseFloat(q('l').value) || 0;
+    const any = ['d','v','b','p','l'].some(c => q(c).value) || q('we').checked || q('ft').checked;
+    q('v').classList.toggle('miss', any && v === null);
+    q('b').classList.toggle('miss', any && b === null);
+    let h = 0, nacht = 0;
+    if (v !== null && b !== null) {
+      let end = b <= v ? b + 1440 : b;
+      h = Math.max(0, end - v - pause) / 60;
+      for (let m = v; m < end; m++) { const x = m % 1440; if (x >= 1200 || x < 360) nacht++; }
+      nacht /= 60;
+    }
+    tr.querySelector('.h').textContent = v !== null && b !== null ? fmt(h) : '–';
+    tr.querySelector('.nt').textContent = v !== null && b !== null ? fmt(nacht) : '–';
+    T += h; N += nacht;
+    const we = q('we').checked, ft = q('ft').checked;
+    if (we) W += h;
+    if (ft) F += h;
+    E += lohn * (h + nacht * z('zNacht') + (we ? h * z('zWe') : 0) + (ft ? h * z('zFt') : 0));
+  });
+  $('sTotal').textContent = fmt(T); $('sNacht').textContent = fmt(N);
+  $('sWe').textContent = fmt(W); $('sFt').textContent = fmt(F);
+  $('sEuro').textContent = fmt(E) + ' €';
+}
+
+function save() {
+  try {
+    const head = {}; HEAD.forEach(k => head[k] = $(k).value);
+    const rows = [...rowsEl.querySelectorAll('tr')].map(tr => {
+      const o = {};
+      ['d','v','b','p','l'].forEach(c => o[c] = tr.querySelector('.' + c).value);
+      o.we = tr.querySelector('.we').checked; o.ft = tr.querySelector('.ft').checked;
+      return o;
+    });
+    localStorage.setItem('stundenzettel', JSON.stringify({ head, rows }));
+  } catch (e) { /* Speichern nicht möglich, App läuft trotzdem */ }
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem('stundenzettel') || 'null');
+    if (!s) return false;
+    HEAD.forEach(k => { if (s.head[k] !== undefined) $(k).value = s.head[k]; });
+    s.rows.forEach(r => addRow(r));
+    return s.rows.length > 0;
+  } catch (e) { return false; }
+}
+
+document.addEventListener('input', e => {
+  e.target.classList.remove('ocr');
+  calc(); save();
+});
+$('add').onclick = () => { addRow(); calc(); };
+$('print').onclick = () => window.print();
+$('reset').onclick = () => {
+  if (!confirm('Wirklich alle Einträge löschen?')) return;
+  rowsEl.innerHTML = ''; HEAD.slice(0, 4).forEach(k => $(k).value = '');
+  for (let i = 0; i < 10; i++) addRow();
+  calc(); save();
+};
+
+/* ---------- Texterkennung ---------- */
+const TIME = /(?<!\d)([01]?\d|2[0-3]):([0-5]\d)(?!\d)/g;
+const pad = n => String(n).padStart(2, '0');
+
+function parseText(text) {
+  const out = [];
+  text.split('\n').forEach(raw => {
+    const line = raw.replace(/;/g, ':');
+    const t = [...line.matchAll(TIME)];
+    if (!t.length) return;
+    const dm = line.match(/(?<!\d)(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})?/);
+    let rest = line.replace(dm ? dm[0] : '', ' ').replace(TIME, ' ');
+    const row = { _ocr: true };
+    if (dm) {
+      let y = dm[3] ? (dm[3].length === 2 ? 2000 + +dm[3] : +dm[3]) : new Date().getFullYear();
+      row.d = `${pad(dm[1])}.${pad(dm[2])}.${y}`;
+      const wd = new Date(y, dm[2] - 1, dm[1]).getDay();
+      if (wd === 0 || wd === 6) row.we = true;
+    }
+    row.v = `${pad(t[0][1])}:${t[0][2]}`;
+    if (t[1]) row.b = `${pad(t[1][1])}:${t[1][2]}`;
+    const lohn = rest.match(/(?<!\d)\d{1,3}[,.]\d{2}(?!\d)/);
+    if (lohn) { row.l = lohn[0].replace(',', '.'); rest = rest.replace(lohn[0], ' '); }
+    const p = rest.match(/(?<![\d,.])\d{1,3}(?![\d,.])/);
+    if (p && +p[0] <= 180) row.p = p[0];
+    out.push(row);
+  });
+  return out;
+}
+
+function putRows(parsed) {
+  const empty = () => [...rowsEl.querySelectorAll('tr')].find(tr =>
+    !['d','v','b','p','l'].some(c => tr.querySelector('.' + c).value));
+  parsed.forEach(r => {
+    const tr = empty();
+    const nr = addRow(r);
+    if (tr) { rowsEl.insertBefore(nr, tr); tr.remove(); }
+  });
+}
+
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const st = $('status');
+  try {
+    st.textContent = 'Erkennung startet …';
+    const res = await Tesseract.recognize(f, 'deu', {
+      logger: m => { if (m.status === 'recognizing text') st.textContent = 'Erkenne Text … ' + Math.round(m.progress * 100) + ' %'; }
+    });
+    const parsed = parseText(res.data.text);
+    if (!parsed.length) {
+      st.textContent = 'Keine Einsatzzeiten erkannt. Bitte besser ausleuchten, gerade fotografieren, Zeiten als HH:MM schreiben, oder die Felder unten von Hand ausfüllen.';
+      return;
+    }
+    putRows(parsed);
+    calc(); save();
+    st.textContent = parsed.length + ' Zeile(n) erkannt. Grüne Felder bitte prüfen, gelbe Felder fehlen noch. Kopf und Unterschriften bitte von Hand ergänzen.';
+  } catch (err) {
+    st.textContent = 'Die Texterkennung konnte nicht laufen (Internetverbindung?). Du kannst alle Felder von Hand ausfüllen.';
+  }
+  e.target.value = '';
+});
+
+if (!load()) for (let i = 0; i < 10; i++) addRow();
+calc();
+</script>
+</body>
+</html>
