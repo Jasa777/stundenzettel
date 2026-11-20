@@ -49,12 +49,13 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset
 
 <section>
   <h2>Sicherung</h2>
-  <p class="note">Alle Daten (Stundenzettel, Meine Daten, Adressbuch, Rechnungen) liegen nur auf diesem Gerät. Speichere regelmäßig eine Sicherung und spiele sie bei Bedarf auf einem anderen Gerät wieder ein.</p>
+  <p class="note">Alle Daten liegen nur auf diesem Gerät. So teilt ihr sie über iCloud: Abwechselnd arbeiten. Am Ende „Sicherung speichern“ und die Datei in den gemeinsamen iCloud-Ordner legen. Die andere Person spielt sie vor dem Arbeiten ein.</p>
   <div class="actions">
     <button id="exp">Sicherung speichern</button>
     <label class="btn sec" for="imp">Sicherung einspielen</label>
     <input id="imp" type="file" accept=".json,application/json">
   </div>
+  <p id="stand"></p>
   <p id="msg" class="note"></p>
 </section>
 </main>
@@ -120,26 +121,52 @@ $('tErl').onclick = () => { tab = 'erledigt'; zeige(); };
 
 /* Sicherung */
 const KEYS = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
-$('exp').onclick = () => {
-  const o = { _app: 'pflege-abrechnung', _stand: new Date().toISOString() };
+function zustand() { return KEYS.map(k => localStorage.getItem(k) || '').join('|'); }
+function hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); }
+function info() { try { return JSON.parse(localStorage.getItem('sicherungInfo') || 'null'); } catch (e) { return null; } }
+function setInfo(zeit) { try { localStorage.setItem('sicherungInfo', JSON.stringify({ hash: hash(zustand()), zeit })); } catch (e) {} }
+function ungesichert() { const i = info(), z = zustand(); return z.replace(/\|/g, '') !== '' && (!i || i.hash !== hash(z)); }
+const zeitText = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
+function stand() {
+  const i = info();
+  $('stand').innerHTML = (i ? 'Letzter Stand: ' + zeitText(i.zeit) + '. ' : 'Noch keine Sicherung gespeichert. ') +
+    (ungesichert() ? '<strong class="bad">Es gibt Änderungen, die noch nicht gesichert sind.</strong>' : (i ? '<span class="ok">Alles gesichert.</span>' : ''));
+}
+$('exp').onclick = async () => {
+  const jetzt = new Date().toISOString();
+  const o = { _app: 'pflege-abrechnung', _stand: jetzt };
   KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) o[k] = JSON.parse(v); });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' }));
-  a.download = 'sicherung-' + new Date().toISOString().slice(0, 10) + '.json';
-  document.body.appendChild(a); a.click(); a.remove();
-  $('msg').textContent = 'Sicherung gespeichert (Ordner Downloads bzw. Dateien).';
+  const name = 'sicherung-' + jetzt.slice(0, 10) + '.json';
+  const file = new File([JSON.stringify(o)], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Sicherung Abrechnung' });
+      $('msg').textContent = 'Wähle im Menü „In Dateien sichern“ und dann den iCloud-Ordner.';
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      $('msg').textContent = 'Sicherung gespeichert (Ordner Downloads bzw. Dateien). Lege sie in den gemeinsamen iCloud-Ordner.';
+    }
+    setInfo(jetzt); stand();
+  } catch (err) { if (err && err.name !== 'AbortError') $('msg').textContent = 'Die Sicherung konnte nicht gespeichert werden.'; }
 };
 $('imp').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
     const o = JSON.parse(await f.text());
     if (o._app !== 'pflege-abrechnung') throw 0;
+    const i = info();
+    if (ungesichert() && !confirm('Achtung: Auf diesem Gerät gibt es Änderungen, die noch nicht gesichert sind. Sie gehen verloren, wenn du die Datei einspielst. Trotzdem einspielen?')) return;
+    if (i && o._stand && o._stand < i.zeit && !confirm('Diese Datei (' + zeitText(o._stand) + ') ist älter als dein letzter Stand (' + zeitText(i.zeit) + '). Trotzdem einspielen?')) return;
     if (!confirm('Die Daten auf diesem Gerät werden durch die Sicherung ersetzt. Fortfahren?')) return;
     KEYS.forEach(k => { if (o[k] !== undefined) localStorage.setItem(k, JSON.stringify(o[k])); });
-    $('msg').textContent = 'Sicherung eingespielt.'; zeige();
+    setInfo(o._stand || new Date().toISOString());
+    $('msg').textContent = 'Sicherung eingespielt.'; zeige(); stand();
   } catch (err) { $('msg').textContent = 'Das ist keine gültige Sicherungsdatei.'; }
   e.target.value = '';
 });
+stand();
 zeige();
 </script>
 </body>

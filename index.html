@@ -25,6 +25,7 @@ a.tile:focus-visible{outline:3px solid #D9A400;outline-offset:2px}
 <main>
 <h1>Abrechnung</h1>
 <p class="sub">Stundenzettel erfassen, Rechnung schreiben, Zahlungen im Blick behalten.</p>
+<p id="sich" class="bad" hidden></p>
 <div class="grid">
   <a class="tile" href="stundenzettel.html"><div class="t">1. Stundenzettel</div><div class="d">Zettel ausfüllen oder Foto einlesen</div></a>
   <a class="tile" href="rechnung.html"><div class="t">2. Neue Rechnung</div><div class="d">Aus dem Stundenzettel, als PDF oder per Mail</div></a>
@@ -40,6 +41,16 @@ try {
   const ue = l.filter(r => { const f = p(r.faellig); return f && f < h; }).length;
   const s = l.reduce((a, r) => a + (r.summe || 0), 0);
   if (l.length) document.getElementById('stat').innerHTML = l.length + ' offen (' + s.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €)' + (ue ? ' · <span class="bad">' + ue + ' überfällig</span>' : '');
+} catch (e) {}
+try {
+  const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
+  const z = K.map(k => localStorage.getItem(k) || '').join('|');
+  const hs = s => { let h = 5381; for (let j = 0; j < s.length; j++) h = ((h << 5) + h + s.charCodeAt(j)) | 0; return String(h); };
+  const inf = JSON.parse(localStorage.getItem('sicherungInfo') || 'null');
+  if (z.replace(/\|/g, '') !== '' && (!inf || inf.hash !== hs(z))) {
+    const e = document.getElementById('sich'); e.hidden = false;
+    e.innerHTML = 'Ungesicherte Änderungen. <a href="rechnungen.html">Jetzt sichern</a>';
+  }
 } catch (e) {}
 </script>
 </body>
