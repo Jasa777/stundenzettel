@@ -28,22 +28,30 @@ input.ocr{background:var(--ocr)}
 #msg{margin:8px 0 0;color:var(--mut);min-height:1.4em}
 details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10px}
 /* Rechnung */
-#sheet{background:#fff;color:#14262B;border:1px solid var(--line);border-radius:10px;padding:28px;font-size:.95rem}
-#sheet .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:3px solid #0E5A61;padding-bottom:12px;margin-bottom:18px}
-#sheet .logo{max-height:80px;max-width:240px}
-#sheet .abs{text-align:right;font-size:.85rem;white-space:pre-line}
-#sheet h3{font-size:1.4rem;margin:0 0 10px;color:#0E5A61}
+#sheet{--c:#0E5A61;--t:rgba(14,90,97,.14);background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.95rem;display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#sheet .band{background:var(--t);padding:16px 24px}
+#sheet .head{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:3px solid var(--c)}
+#sheet .logo{max-height:84px;max-width:260px;mix-blend-mode:multiply;display:block}
+#sheet .title{font-size:1.5rem;font-weight:700;color:var(--c);text-align:right;line-height:1.1}
+#sheet .body{flex:1;padding:20px 24px}
 #sheet .meta{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 #sheet .empf{white-space:pre-line}
 #sheet table{width:100%;border-collapse:collapse;min-width:0;margin-top:8px}
-#sheet th{background:#E8F1F1;color:#14262B;text-align:left;padding:6px;font-size:.85rem}
+#sheet th{background:var(--t);color:#111;text-align:left;padding:6px;font-size:.85rem}
 #sheet td{padding:6px;border-bottom:1px solid #D0DCDF;vertical-align:top}
 #sheet .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 #sheet tfoot td{border:0;font-weight:700;font-size:1.05rem;padding-top:10px}
 #sheet .hint{margin-top:14px;font-size:.88rem}
 #sheet .pay{margin-top:14px;white-space:pre-line}
+#sheet .foot{border-top:3px solid var(--c);display:grid;grid-template-columns:1fr .9fr 1.4fr;gap:16px;font-size:.8rem;line-height:1.4}
+#sheet .foot h4{margin:0 0 3px;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6B7780;font-weight:600}
+#sheet .foot div{white-space:pre-line;overflow-wrap:anywhere}
+#sheet .blk{color:#111}
+#sheet .gry{color:#6B7780}
 .wrap{overflow-x:auto}
-@media print{body{background:#fff}.noprint{display:none!important}main{padding:0;max-width:none}#sheet{border:0;padding:0}}
+@media(max-width:560px){#sheet .foot{grid-template-columns:1fr}}
+@page{size:A4;margin:0}
+@media print{body{background:#fff}.noprint{display:none!important}main{padding:0;max-width:none}.wrap{overflow:visible}#sheet{border:0;border-radius:0;width:210mm;min-height:297mm}#sheet .band{padding:8mm 15mm}#sheet .body{padding:10mm 15mm}#sheet .foot{grid-template-columns:1fr .9fr 1.4fr!important}}
 </style>
 </head>
 <body>
@@ -83,6 +91,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
       <label>BIC (optional)<input id="mBic"></label>
       <label>Kilometersatz (€ je km)<input id="mKmSatz" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 0,30"></label>
       <label>Zahlungsziel (Tage)<input id="mTage" type="number" min="0" step="1" inputmode="numeric" value="14"></label>
+      <label>Farbe der Balken (wird aus dem Logo gewählt)<input id="mFarbe" type="color" value="#0E5A61"></label>
     </div>
     <div class="actions">
       <label class="btn sec" for="file">Logo wählen</label>
@@ -116,7 +125,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const num = v => parseFloat(String(v == null ? '' : v).replace(',', '.')) || 0;
 const mins = s => { if (!s) return null; const [h, m] = s.split(':').map(Number); return h * 60 + m; };
-const MEINE = ['mName','mAdresse','mTel','mMail','mSteuer','mIban','mBic','mKmSatz','mTage'];
+const MEINE = ['mName','mAdresse','mTel','mMail','mSteuer','mIban','mBic','mKmSatz','mTage','mFarbe'];
 let logo = '', stunden = null;
 
 /* ---------- Berechnung aus dem Stundenzettel ---------- */
@@ -168,30 +177,41 @@ function render() {
   const bereich = $('rBereich').value.trim();
   const zeit = $('rZeit').value.trim();
   const fae = faellig();
-  const abs = [$('mName').value, $('mAdresse').value, $('mTel').value, $('mMail').value].filter(Boolean).join('\n');
-  const bank = [$('mIban').value && 'IBAN: ' + $('mIban').value, $('mBic').value && 'BIC: ' + $('mBic').value].filter(Boolean).join('   ');
-  $('sheet').innerHTML = `
-    <div class="top">
+  const col = $('mFarbe').value || '#0E5A61';
+  const rgb = [1, 3, 5].map(i => parseInt(col.slice(i, i + 2), 16));
+  const sh = $('sheet');
+  sh.style.setProperty('--c', col);
+  sh.style.setProperty('--t', 'rgba(' + rgb.join(',') + ',.14)');
+  const bank = [$('mIban').value && 'IBAN: ' + $('mIban').value, $('mBic').value && 'BIC: ' + $('mBic').value].filter(Boolean).join('\n');
+  const kont = [$('mTel').value && 'Tel.: ' + $('mTel').value, $('mMail').value].filter(Boolean).join('\n');
+  sh.innerHTML = `
+    <div class="band head">
       <div>${logo ? '<img class="logo" alt="Logo" src="' + logo + '">' : '<strong>' + esc($('mName').value) + '</strong>'}</div>
-      <div class="abs">${esc(abs)}</div>
+      <div class="title">Honorarrechnung</div>
     </div>
-    <h3>Honorarrechnung</h3>
-    <div class="meta">
-      <div class="empf">${esc($('rEmpf').value)}</div>
-      <div>
-        <div>Rechnungsnr.: <strong>${esc($('rNr').value)}</strong></div>
-        <div>Datum: ${esc($('rDatum').value)}</div>
-        ${$('mSteuer').value ? '<div>Steuernummer: ' + esc($('mSteuer').value) + '</div>' : ''}
+    <div class="body">
+      <div class="meta">
+        <div class="empf">${esc($('rEmpf').value)}</div>
+        <div>
+          <div>Rechnungsnr.: <strong>${esc($('rNr').value)}</strong></div>
+          <div>Datum: ${esc($('rDatum').value)}</div>
+          ${$('mSteuer').value ? '<div>Steuernummer: ' + esc($('mSteuer').value) + '</div>' : ''}
+        </div>
       </div>
+      <div>${zeit ? 'Leistungszeitraum: ' + esc(zeit) : ''}${bereich ? (zeit ? ' · ' : '') + 'Bereich / Station: ' + esc(bereich) : ''}</div>
+      <table>
+        <thead><tr><th>Leistung</th><th class="r">Menge</th><th class="r">Einzelpreis</th><th class="r">Betrag</th></tr></thead>
+        <tbody>${P.map(p => `<tr><td>${esc(p.t)}</td><td class="r">${fmt(p.q)} ${p.u}</td><td class="r">${fmt(p.e)} €</td><td class="r">${fmt(Math.round(p.b * 100) / 100)} €</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="3" class="r">Rechnungsbetrag</td><td class="r">${fmt(sum)} €</td></tr></tfoot>
+      </table>
+      <p class="hint">Leistungen von Pflegefachkräften nach § 4 Nr. 14 UStG sind von der Umsatzsteuer befreit.</p>
+      <p class="pay">${fae ? 'Bitte überweisen Sie den Betrag bis zum <strong>' + fae + '</strong>' : 'Bitte überweisen Sie den Betrag'} unter Angabe der Rechnungsnummer auf das unten genannte Konto.</p>
     </div>
-    <div>${zeit ? 'Leistungszeitraum: ' + esc(zeit) : ''}${bereich ? (zeit ? ' · ' : '') + 'Bereich / Station: ' + esc(bereich) : ''}</div>
-    <table>
-      <thead><tr><th>Leistung</th><th class="r">Menge</th><th class="r">Einzelpreis</th><th class="r">Betrag</th></tr></thead>
-      <tbody>${P.map(p => `<tr><td>${esc(p.t)}</td><td class="r">${fmt(p.q)} ${p.u}</td><td class="r">${fmt(p.e)} €</td><td class="r">${fmt(Math.round(p.b * 100) / 100)} €</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td colspan="3" class="r">Rechnungsbetrag</td><td class="r">${fmt(sum)} €</td></tr></tfoot>
-    </table>
-    <p class="hint">Leistungen von Pflegefachkräften nach § 4 Nr. 14 UStG sind von der Umsatzsteuer befreit.</p>
-    <p class="pay">${fae ? 'Bitte überweisen Sie den Betrag bis zum <strong>' + fae + '</strong>' : 'Bitte überweisen Sie den Betrag'} unter Angabe der Rechnungsnummer auf folgendes Konto:\n${esc(bank)}</p>`;
+    <div class="band foot">
+      <div><h4>Anschrift</h4><div class="blk"><strong>${esc($('mName').value)}</strong></div><div class="gry">${esc($('mAdresse').value)}</div></div>
+      <div><h4>Kontakt</h4><div class="gry">${esc(kont)}</div></div>
+      <div><h4>Bankverbindung</h4><div class="blk">${esc(bank)}</div></div>
+    </div>`;
   const body = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie meine Rechnung Nr. ' + $('rNr').value +
     (zeit ? ' für den Zeitraum ' + zeit : '') + '. Den Rechnungsbetrag von ' + fmt(sum) + ' € bitte ich bis zum ' + (fae || '[Datum]') +
     ' auf das in der Rechnung genannte Konto zu überweisen.\n\nBei Rückfragen melde ich mich gern. Ich bedanke mich für Ihr Vertrauen und würde mich freuen, auch künftig für Sie tätig sein zu dürfen.\n\nMit freundlichen Grüßen\n' + $('mName').value;
@@ -224,6 +244,21 @@ function nextNr() {
   return y + '-' + String(n).padStart(3, '0');
 }
 
+function zeitraumAus(rows) {
+  const jahr = new Date().getFullYear(), ds = [];
+  rows.forEach(r => {
+    const m = String(r.d || '').match(/(\d{1,2})\.\s*(\d{1,2})\.?\s*(\d{2,4})?/);
+    if (!m) return;
+    const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : jahr;
+    const d = new Date(y, +m[2] - 1, +m[1]);
+    if (!isNaN(d)) ds.push(d);
+  });
+  if (!ds.length) return '';
+  const f = d => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const a = new Date(Math.min.apply(null, ds)), b = new Date(Math.max.apply(null, ds));
+  return f(a) === f(b) ? f(a) : f(a) + ' – ' + f(b);
+}
+
 function ladeStunden() {
   let st = null;
   try { st = JSON.parse(localStorage.getItem('stundenzettel') || 'null'); } catch (e) {}
@@ -236,7 +271,7 @@ function ladeStunden() {
   stunden = st;
   const s = berechne(st), h = st.head || {};
   if (h.auftraggeber) $('rEmpf').value = h.auftraggeber;
-  if (h.zeitraum) $('rZeit').value = h.zeitraum;
+  $('rZeit').value = zeitraumAus(st.rows) || h.zeitraum || '';
   if (h.bereich) $('rBereich').value = h.bereich;
   const warn = s.lohn > 0 ? '' : ' Achtung: Im Stundenzettel fehlt der Stundenlohn.';
   msg.textContent = fmt(s.T) + ' Std. insgesamt (davon Nacht ' + fmt(s.N) + ', Wochenende ' + fmt(s.W) + ', Feiertag ' + fmt(s.F) + '), Stundenlohn ' + fmt(s.lohn) + ' €.' + warn;
@@ -250,6 +285,17 @@ async function logoLaden(file) {
   const c = document.createElement('canvas');
   c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  try {
+    const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, bins = {};
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], g = px[i + 1], b = px[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      if (px[i + 3] < 128 || mn > 225 || mx - mn < 40 || mx < 40) continue;
+      const k = (r >> 5) + ',' + (g >> 5) + ',' + (b >> 5), e = bins[k] || (bins[k] = { n: 0, r: 0, g: 0, b: 0 });
+      e.n++; e.r += r; e.g += g; e.b += b;
+    }
+    const best = Object.values(bins).sort((x, y) => y.n - x.n)[0];
+    if (best) $('mFarbe').value = '#' + [best.r, best.g, best.b].map(v => Math.round(v / best.n).toString(16).padStart(2, '0')).join('');
+  } catch (e) {}
   return c.toDataURL('image/png');
 }
 $('file').addEventListener('change', async e => {
