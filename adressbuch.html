@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adressbuch</title>
+<style>
+:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--bad:#B42318;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--bad:#FF8A80;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:820px;margin:0 auto;padding:16px}
+h1{font-size:1.7rem;margin:8px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px}
+section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 10px}
+label{display:block;font-size:.88rem;color:var(--mut);margin-bottom:10px}
+input,textarea{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
+button{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+button.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
+button.del{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #D9A400;outline-offset:1px}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.nm{font-weight:700}
+.mut{color:var(--mut);font-size:.9rem;white-space:pre-line}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#msg{color:var(--mut);font-size:.9rem;min-height:1.3em}
+</style>
+</head>
+<body>
+<main>
+<h1>Adressbuch</h1>
+<p class="sub"><a href="index.html">Zur Startseite</a> · <a href="rechnung.html">Neue Rechnung</a></p>
+
+<section>
+  <h2 id="ft">Neuer Kunde</h2>
+  <label>Name / Einrichtung<input id="name" autocomplete="off"></label>
+  <label>Anschrift (Straße, PLZ Ort)<textarea id="adr" rows="3"></textarea></label>
+  <label>E-Mail für Rechnungen<input id="mail" type="email" inputmode="email" autocomplete="off"></label>
+  <label>Telefon (optional)<input id="tel" inputmode="tel" autocomplete="off"></label>
+  <div class="actions">
+    <button id="save">Speichern</button>
+    <button class="sec" id="cancel" hidden>Abbrechen</button>
+  </div>
+  <p id="msg"></p>
+</section>
+
+<section>
+  <h2>Gespeicherte Kunden</h2>
+  <label>Suchen<input id="q" type="search" placeholder="Name oder Ort"></label>
+  <div id="list"></div>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let edit = null;
+function lade() { try { return JSON.parse(localStorage.getItem('adressbuch') || '[]'); } catch (e) { return []; } }
+function sichern(l) { try { localStorage.setItem('adressbuch', JSON.stringify(l)); return true; } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; return false; } }
+
+function leeren() { edit = null; ['name', 'adr', 'mail', 'tel'].forEach(k => $(k).value = ''); $('ft').textContent = 'Neuer Kunde'; $('cancel').hidden = true; }
+
+function zeige() {
+  const q = $('q').value.trim().toLowerCase();
+  const l = lade().filter(k => !q || (k.name + ' ' + k.adresse).toLowerCase().indexOf(q) >= 0)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  $('list').innerHTML = l.length ? l.map(k => `<div class="card">
+    <div class="nm">${esc(k.name)}</div>
+    <div class="mut">${esc(k.adresse)}${k.mail ? '\n' + esc(k.mail) : ''}${k.tel ? '\nTel.: ' + esc(k.tel) : ''}</div>
+    <div class="actions"><button class="sec" data-a="e" data-id="${esc(k.id)}">Bearbeiten</button><button class="del" data-a="d" data-id="${esc(k.id)}">Löschen</button></div>
+  </div>`).join('') : '<p class="mut">' + (q ? 'Nichts gefunden.' : 'Noch kein Kunde gespeichert.') + '</p>';
+}
+
+$('save').onclick = () => {
+  const name = $('name').value.trim();
+  if (!name) { $('msg').textContent = 'Bitte einen Namen eintragen.'; $('name').focus(); return; }
+  const l = lade();
+  const k = { id: edit || String(Date.now()), name, adresse: $('adr').value.trim(), mail: $('mail').value.trim(), tel: $('tel').value.trim() };
+  const i = l.findIndex(x => x.id === k.id);
+  if (i >= 0) l[i] = k; else l.push(k);
+  if (sichern(l)) { $('msg').textContent = '„' + name + '“ gespeichert.'; leeren(); zeige(); }
+};
+$('cancel').onclick = () => { leeren(); $('msg').textContent = ''; };
+$('q').addEventListener('input', zeige);
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const l = lade(), k = l.find(x => x.id === b.dataset.id); if (!k) return;
+  if (b.dataset.a === 'e') {
+    edit = k.id; $('name').value = k.name; $('adr').value = k.adresse; $('mail').value = k.mail; $('tel').value = k.tel || '';
+    $('ft').textContent = 'Kunde bearbeiten'; $('cancel').hidden = false; $('msg').textContent = ''; window.scrollTo(0, 0); $('name').focus();
+  } else if (confirm('„' + k.name + '“ wirklich löschen? Bereits gespeicherte Rechnungen bleiben unverändert.')) {
+    sichern(l.filter(x => x.id !== k.id)); if (edit === k.id) leeren(); zeige();
+  }
+});
+zeige();
+</script>
+</body>
+</html>

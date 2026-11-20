@@ -16,11 +16,11 @@ section{background:var(--surf);border:1px solid var(--line);border-radius:10px;p
 h2{font-size:1.05rem;margin:0 0 10px}
 button,.btn{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:10px 16px;cursor:pointer;display:inline-block;text-decoration:none}
 button.sec,.btn.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
-button:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--warn-ln);outline-offset:1px}
+button:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--warn-ln);outline-offset:1px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .full{grid-column:1/-1}
 label{display:block;font-size:.88rem;color:var(--mut)}
-input,textarea{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+input,textarea,select{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
 input.ocr{background:var(--ocr)}
 #file{position:absolute;opacity:0;width:1px;height:1px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
@@ -71,6 +71,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
     <label>Rechnungsnummer<input id="rNr"></label>
     <label>Rechnungsdatum<input id="rDatum" placeholder="TT.MM.JJJJ" inputmode="numeric"></label>
     <label>Leistungszeitraum<input id="rZeit"></label>
+    <label class="full">Aus dem Adressbuch wählen (<a href="adressbuch.html">Adressbuch öffnen</a>)<select id="rAdr"><option value="">– keine Auswahl –</option></select></label>
     <label class="full">Rechnungsempfänger (Name und Anschrift)<textarea id="rEmpf" rows="3"></textarea></label>
     <label>E-Mail des Empfängers<input id="rMail" type="email" inputmode="email"></label>
     <label>Bereich / Station (optional)<input id="rBereich"></label>
@@ -271,6 +272,9 @@ function ladeStunden() {
   stunden = st;
   const s = berechne(st), h = st.head || {};
   if (h.auftraggeber) $('rEmpf').value = h.auftraggeber;
+  const ersteZeile = String(h.auftraggeber || '').split('\n')[0].trim().toLowerCase();
+  const treffer = ersteZeile && adressen().find(k => k.name.trim().toLowerCase() === ersteZeile);
+  if (treffer) waehleAdresse(treffer.id);
   $('rZeit').value = zeitraumAus(st.rows) || h.zeitraum || '';
   if (h.bereich) $('rBereich').value = h.bereich;
   const warn = s.lohn > 0 ? '' : ' Achtung: Im Stundenzettel fehlt der Stundenlohn.';
@@ -327,8 +331,24 @@ $('save').onclick = () => {
   catch (e) { $('msg2').textContent = 'Speichern auf diesem Gerät war nicht möglich.'; }
 };
 
+
+/* ---------- Adressbuch ---------- */
+function adressen() { try { return JSON.parse(localStorage.getItem('adressbuch') || '[]'); } catch (e) { return []; } }
+function fuelleAdressen() {
+  const sel = $('rAdr'), l = adressen().sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  sel.innerHTML = '<option value="">– keine Auswahl –</option>' + l.map(k => '<option value="' + esc(k.id) + '">' + esc(k.name) + '</option>').join('');
+}
+function waehleAdresse(id) {
+  const k = adressen().find(x => x.id === id); if (!k) return;
+  $('rEmpf').value = k.name + (k.adresse ? '\n' + k.adresse : '');
+  $('rMail').value = k.mail || '';
+  $('rAdr').value = id;
+}
+$('rAdr').addEventListener('change', e => { if (e.target.value) waehleAdresse(e.target.value); render(); });
+
 /* ---------- Start ---------- */
 loadMeine();
+fuelleAdressen();
 $('rDatum').value = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 $('rNr').value = nextNr();
 if (!$('mName').value) $('meine').open = true;

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rechnungen</title>
+<style>
+:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--bad:#B42318;--ok:#1B7A3E;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--bad:#FF8A80;--ok:#6FD39A;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:820px;margin:0 auto;padding:16px}
+h1{font-size:1.7rem;margin:8px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px}
+section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 10px}
+button,.btn{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer;display:inline-block;text-decoration:none}
+button.sec,.btn.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
+button.del{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset:1px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.nr{font-weight:700}
+.sum{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mut{color:var(--mut);font-size:.9rem}
+.bad{color:var(--bad);font-weight:700}
+.ok{color:var(--ok);font-weight:700}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.total{font-size:1.1rem}
+.note{font-size:.85rem;color:var(--mut)}
+#imp{position:absolute;opacity:0;width:1px;height:1px}
+</style>
+</head>
+<body>
+<main>
+<h1>Rechnungen</h1>
+<p class="sub"><a href="index.html">Zur Startseite</a> · <a href="rechnung.html">Neue Rechnung</a></p>
+
+<section>
+  <div class="tabs">
+    <button id="tOffen">Offen</button>
+    <button id="tErl" class="sec">Erledigt</button>
+  </div>
+  <p id="total" class="total"></p>
+  <div id="list"></div>
+</section>
+
+<section>
+  <h2>Sicherung</h2>
+  <p class="note">Alle Daten (Stundenzettel, Meine Daten, Adressbuch, Rechnungen) liegen nur auf diesem Gerät. Speichere regelmäßig eine Sicherung und spiele sie bei Bedarf auf einem anderen Gerät wieder ein.</p>
+  <div class="actions">
+    <button id="exp">Sicherung speichern</button>
+    <label class="btn sec" for="imp">Sicherung einspielen</label>
+    <input id="imp" type="file" accept=".json,application/json">
+  </div>
+  <p id="msg" class="note"></p>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const heute = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const datum = d => d.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
+const parseD = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
+let tab = 'offen';
+
+function lade() { try { return JSON.parse(localStorage.getItem('rechnungen') || '[]'); } catch (e) { return []; } }
+function sichern(l) { try { localStorage.setItem('rechnungen', JSON.stringify(l)); } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; } }
+function meinName() { try { return (JSON.parse(localStorage.getItem('meineDaten') || '{}').mName) || ''; } catch (e) { return ''; } }
+
+function ueberfaellig(r) { const f = parseD(r.faellig); return r.status !== 'erledigt' && f && f < heute(); }
+
+function erinnerung(r) {
+  const body = 'Sehr geehrte Damen und Herren,\n\nbei der Durchsicht meiner Unterlagen ist mir aufgefallen, dass die Rechnung Nr. ' + r.nr +
+    (r.datum ? ' vom ' + r.datum : '') + ' über ' + fmt(r.summe) + ' € noch nicht beglichen ist. Das Zahlungsziel war der ' + (r.faellig || '[Datum]') +
+    '.\n\nSollten Sie die Zahlung bereits veranlasst haben, betrachten Sie dieses Schreiben bitte als gegenstandslos. Andernfalls bitte ich Sie, den Betrag in den nächsten Tagen zu überweisen.\n\nBei Rückfragen melde ich mich gern.\n\nMit freundlichen Grüßen\n' + meinName();
+  return 'mailto:' + encodeURIComponent(r.mail || '').replace('%40', '@') + '?subject=' + encodeURIComponent('Zahlungserinnerung Rechnung Nr. ' + r.nr) + '&body=' + encodeURIComponent(body);
+}
+
+function zeige() {
+  const l = lade();
+  const offen = l.filter(r => r.status !== 'erledigt'), erl = l.filter(r => r.status === 'erledigt');
+  $('tOffen').className = tab === 'offen' ? '' : 'sec';
+  $('tErl').className = tab === 'erledigt' ? '' : 'sec';
+  $('tOffen').textContent = 'Offen (' + offen.length + ')';
+  $('tErl').textContent = 'Erledigt (' + erl.length + ')';
+  const liste = (tab === 'offen' ? offen : erl).slice().sort((a, b) => (parseD(b.datum) || 0) - (parseD(a.datum) || 0));
+  const s = liste.reduce((a, r) => a + (r.summe || 0), 0);
+  $('total').innerHTML = (tab === 'offen' ? 'Noch offen: ' : 'Bezahlt: ') + '<strong>' + fmt(s) + ' €</strong>';
+  if (!liste.length) { $('list').innerHTML = '<p class="mut">' + (tab === 'offen' ? 'Keine offenen Rechnungen.' : 'Noch keine erledigten Rechnungen.') + '</p>'; return; }
+  $('list').innerHTML = liste.map(r => {
+    const i = l.indexOf(r), ue = ueberfaellig(r), name = String(r.empfaenger || '').split('\n')[0];
+    return `<div class="card">
+      <div class="row"><span class="nr">${esc(r.nr)}</span><span class="sum">${fmt(r.summe || 0)} €</span></div>
+      <div class="mut">${esc(name)}${r.zeitraum ? ' · ' + esc(r.zeitraum) : ''}</div>
+      <div class="mut">Rechnung vom ${esc(r.datum)} · ${r.status === 'erledigt' ? '<span class="ok">bezahlt' + (r.bezahltAm ? ' am ' + esc(r.bezahltAm) : '') + '</span>' : (ue ? '<span class="bad">überfällig seit ' + esc(r.faellig) + '</span>' : 'fällig am ' + esc(r.faellig || '–'))}</div>
+      <div class="actions">
+        ${r.status === 'erledigt'
+          ? `<button class="sec" data-a="open" data-i="${i}">Wieder öffnen</button>`
+          : `<button data-a="done" data-i="${i}">Bezahlt</button>${ue ? `<a class="btn sec" href="${erinnerung(r)}">Zahlungserinnerung</a>` : ''}`}
+        <button class="del" data-a="del" data-i="${i}">Löschen</button>
+      </div></div>`;
+  }).join('');
+}
+
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const l = lade(), i = +b.dataset.i, r = l[i]; if (!r) return;
+  if (b.dataset.a === 'done') { r.status = 'erledigt'; r.bezahltAm = datum(new Date()); }
+  else if (b.dataset.a === 'open') { r.status = 'offen'; delete r.bezahltAm; }
+  else if (b.dataset.a === 'del') { if (!confirm('Rechnung ' + r.nr + ' wirklich löschen?')) return; l.splice(i, 1); }
+  sichern(l); zeige();
+});
+$('tOffen').onclick = () => { tab = 'offen'; zeige(); };
+$('tErl').onclick = () => { tab = 'erledigt'; zeige(); };
+
+/* Sicherung */
+const KEYS = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
+$('exp').onclick = () => {
+  const o = { _app: 'pflege-abrechnung', _stand: new Date().toISOString() };
+  KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) o[k] = JSON.parse(v); });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' }));
+  a.download = 'sicherung-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  $('msg').textContent = 'Sicherung gespeichert (Ordner Downloads bzw. Dateien).';
+};
+$('imp').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (o._app !== 'pflege-abrechnung') throw 0;
+    if (!confirm('Die Daten auf diesem Gerät werden durch die Sicherung ersetzt. Fortfahren?')) return;
+    KEYS.forEach(k => { if (o[k] !== undefined) localStorage.setItem(k, JSON.stringify(o[k])); });
+    $('msg').textContent = 'Sicherung eingespielt.'; zeige();
+  } catch (err) { $('msg').textContent = 'Das ist keine gültige Sicherungsdatei.'; }
+  e.target.value = '';
+});
+zeige();
+</script>
+</body>
+</html>
