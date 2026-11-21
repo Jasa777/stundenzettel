@@ -26,12 +26,16 @@ button:focus-visible,.btn:focus-within,input:focus-visible{outline:3px solid var
 label{display:block;font-size:.88rem;color:var(--mut)}
 input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
 .wrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:760px}
+table{border-collapse:collapse;width:100%;min-width:880px}
 th{font-size:.82rem;text-align:left;color:var(--mut);font-weight:600;padding:4px 4px 6px}
 td{padding:3px 3px}
 td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:8px}
 td.c{text-align:center}
 td.c input{width:20px;height:20px}
+td.act{white-space:nowrap;padding-right:6px}
+.act button{min-width:36px;min-height:36px;padding:2px 8px;border-radius:8px;background:transparent;color:var(--pri);border:1.5px solid var(--pri);font-size:1rem;margin-right:3px}
+.act button.del{color:var(--bad);border-color:var(--bad)}
+.sr{position:absolute;left:-9999px}
 input.ocr{background:var(--ocr)}
 input.miss{background:var(--warn);border-color:var(--warn-ln)}
 .legend{font-size:.85rem;color:var(--mut);margin:8px 0 0}
@@ -70,7 +74,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
 <section>
   <h2>Kopf</h2>
   <div class="grid">
-    <label>Zeitraum<input id="zeitraum" placeholder="z. B. 03.11.–16.11.2026"></label>
+    <label>Zeitraum<input id="zeitraum" placeholder="TT.MM.JJJJ – TT.MM.JJJJ" inputmode="numeric"></label>
     <label>Auftraggeber<input id="auftraggeber"></label>
     <label>Auftragnehmer<input id="auftragnehmer"></label>
     <label>Bereich / Station<input id="bereich"></label>
@@ -85,7 +89,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
   <h2>Einsätze</h2>
   <div class="wrap">
   <table>
-    <thead><tr><th>Datum</th><th>von</th><th>bis</th><th>Pause (Min.)</th><th>Std.</th><th>Nacht (Std.)</th><th>Wochenende</th><th>Feiertag</th></tr></thead>
+    <thead><tr><th class="noprint"><span class="sr">Zeile</span></th><th>Datum</th><th>von</th><th>bis</th><th>Pause (Min.)</th><th>Std.</th><th>Nacht (Std.)</th><th>Wochenende</th><th>Feiertag</th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
   </div>
@@ -121,6 +125,7 @@ const mins = s => { if(!s) return null; const [h,m] = s.split(':').map(Number); 
 function addRow(d = {}) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
+    <td class="act noprint"><button type="button" data-a="up" aria-label="Zeile nach oben">↑</button><button type="button" data-a="down" aria-label="Zeile nach unten">↓</button><button type="button" class="del" data-a="del" aria-label="Zeile löschen">✕</button></td>
     <td><input class="d" placeholder="TT.MM.JJJJ" inputmode="numeric" aria-label="Datum"></td>
     <td><input class="v" type="time" aria-label="Arbeitszeit von"></td>
     <td><input class="b" type="time" aria-label="Arbeitszeit bis"></td>
@@ -194,7 +199,36 @@ function load() {
   } catch (e) { return false; }
 }
 
+
+rowsEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const tr = b.closest('tr'), a = b.dataset.a;
+  if (a === 'up' && tr.previousElementSibling) rowsEl.insertBefore(tr, tr.previousElementSibling);
+  else if (a === 'down' && tr.nextElementSibling) rowsEl.insertBefore(tr.nextElementSibling, tr);
+  else if (a === 'del') {
+    const voll = ['d', 'v', 'b', 'p'].some(c => tr.querySelector('.' + c).value) || tr.querySelector('.we').checked || tr.querySelector('.ft').checked;
+    if (voll && !confirm('Diese Zeile löschen?')) return;
+    tr.remove();
+  }
+  calc(); save();
+});
+/* Datum automatisch mit Punkten */
+function fmtDatum(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
+function fmtZeitraum(v) {
+  const p = String(v).split(/\s*[–—-]\s*/);
+  if (p.length > 1) { return fmtDatum(p[0]) + ' – ' + fmtDatum(p.slice(1).join('')); }
+  const d = String(v).replace(/\D/g, '').slice(0, 16), a = fmtDatum(d.slice(0, 8)), b = fmtDatum(d.slice(8));
+  return b ? a + ' – ' + b : a;
+}
+function autoDatum(t, art) {
+  if (!/^[\d.\s–—\/-]*$/.test(t.value) || t.selectionStart !== t.value.length) return;
+  const n = art === 'zeit' ? fmtZeitraum(t.value) : fmtDatum(t.value);
+  if (n !== t.value) t.value = n;
+}
+
 document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.classList.contains('d')) autoDatum(t); else if (t.id === 'zeitraum') autoDatum(t, 'zeit');
   e.target.classList.remove('ocr');
   calc(); save();
 });

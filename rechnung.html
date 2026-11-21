@@ -51,7 +51,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
   <div class="grid">
     <label>Rechnungsnummer<input id="rNr"></label>
     <label>Rechnungsdatum<input id="rDatum" placeholder="TT.MM.JJJJ" inputmode="numeric"></label>
-    <label>Leistungszeitraum<input id="rZeit"></label>
+    <label>Leistungszeitraum<input id="rZeit" placeholder="TT.MM.JJJJ – TT.MM.JJJJ" inputmode="numeric"></label>
     <label class="full">Aus dem Adressbuch wählen (<a href="adressbuch.html">Adressbuch öffnen</a>)<select id="rAdr"><option value="">– keine Auswahl –</option></select></label>
     <label class="full">Rechnungsempfänger (Name und Anschrift)<textarea id="rEmpf" rows="3"></textarea></label>
     <label>E-Mail des Empfängers<input id="rMail" type="email" inputmode="email"></label>
@@ -393,7 +393,23 @@ $('file').addEventListener('change', async e => {
 $('logoDel').onclick = () => { logo = ''; saveMeine(); render(); };
 
 /* ---------- Ereignisse ---------- */
+
+/* Datum automatisch mit Punkten */
+function fmtDatum(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
+function fmtZeitraum(v) {
+  const p = String(v).split(/\s*[–—-]\s*/);
+  if (p.length > 1) { return fmtDatum(p[0]) + ' – ' + fmtDatum(p.slice(1).join('')); }
+  const d = String(v).replace(/\D/g, '').slice(0, 16), a = fmtDatum(d.slice(0, 8)), b = fmtDatum(d.slice(8));
+  return b ? a + ' – ' + b : a;
+}
+function autoDatum(t, art) {
+  if (!/^[\d.\s–—\/-]*$/.test(t.value) || t.selectionStart !== t.value.length) return;
+  const n = art === 'zeit' ? fmtZeitraum(t.value) : fmtDatum(t.value);
+  if (n !== t.value) t.value = n;
+}
+
 document.addEventListener('input', e => {
+  if (e.target.id === 'rDatum') autoDatum(e.target); else if (e.target.id === 'rZeit') autoDatum(e.target, 'zeit');
   if (MEINE.indexOf(e.target.id) >= 0) saveMeine();
   render();
 });
