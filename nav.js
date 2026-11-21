@@ -1,6 +1,6 @@
 (function () {
   var p = location.pathname.split('/').pop() || 'index.html';
-  var cur = { 'index.html': 'index', 'stundenzettel.html': 'stz', 'rechnung.html': 're', 'rechnungen.html': 're', 'adressbuch.html': 'kd', 'sicherung.html': 'si' }[p] || '';
+  var cur = { 'index.html': 'index', 'stundenzettel.html': 'stz', 'rechnung.html': 're', 'rechnungen.html': 're', 'adressbuch.html': 'kd', 'sicherung.html': 'si', 'meine-daten.html': '' }[p] || '';
   var I = {
     index: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     stz: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',

@@ -67,7 +67,7 @@ if (['alle', 'offen', 'erledigt'].indexOf(tab) < 0) tab = 'alle';
 
 function lade() { try { return JSON.parse(localStorage.getItem('rechnungen') || '[]'); } catch (e) { return []; } }
 function sichern(l) { try { localStorage.setItem('rechnungen', JSON.stringify(l)); } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; } }
-function meinName() { try { return (JSON.parse(localStorage.getItem('meineDaten') || '{}').mName) || ''; } catch (e) { return ''; } }
+function meinName() { try { const m = JSON.parse(localStorage.getItem('meineDaten') || '{}'); return m.mMailName || m.mName || ''; } catch (e) { return ''; } }
 
 function ueberfaellig(r) { const f = parseD(r.faellig); return r.status !== 'erledigt' && f && f < heute(); }
 

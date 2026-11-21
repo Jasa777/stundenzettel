@@ -202,7 +202,7 @@ $('add').onclick = () => { addRow(); calc(); };
 $('print').onclick = () => window.print();
 $('reset').onclick = () => {
   if (!confirm('Wirklich alle Einträge löschen?')) return;
-  rowsEl.innerHTML = ''; HEAD.slice(0, 5).forEach(k => $(k).value = '');
+  rowsEl.innerHTML = ''; HEAD.slice(0, 5).forEach(k => $(k).value = ''); prefillStandard();
   for (let i = 0; i < 10; i++) addRow();
   calc(); save();
 };
@@ -315,6 +315,12 @@ $('file').addEventListener('change', async e => {
 });
 
 if (!load()) for (let i = 0; i < 10; i++) addRow();
+function prefillStandard() {
+  let m = {}; try { m = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
+  [['auftragnehmer', 'mName'], ['lohn', 'mStundenlohn'], ['zNacht', 'mZuNacht'], ['zWe', 'mZuWe'], ['zFt', 'mZuFt']].forEach(([id, k]) => { if (!$(id).value && m[k] !== undefined && m[k] !== '') $(id).value = m[k]; });
+  save();
+}
+prefillStandard();
 calc();
 </script>
 </body>

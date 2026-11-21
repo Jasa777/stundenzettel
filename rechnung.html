@@ -30,31 +30,6 @@ input.ocr{background:var(--ocr)}
 .note{font-size:.85rem;color:var(--mut)}
 #msg{margin:8px 0 0;color:var(--mut);min-height:1.4em}
 details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10px}
-/* Rechnung */
-#sheet{--c:#0E5A61;--t:rgba(14,90,97,.14);background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.95rem;display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-#sheet .band{background:var(--t);padding:16px 24px}
-#sheet .head{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:3px solid var(--c)}
-#sheet .logo{max-height:84px;max-width:260px;mix-blend-mode:multiply;display:block}
-#sheet .title{font-size:1.5rem;font-weight:700;color:var(--c);text-align:right;line-height:1.1}
-#sheet .body{flex:1;padding:20px 24px}
-#sheet .meta{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
-#sheet .empf{white-space:pre-line}
-#sheet table{width:100%;border-collapse:collapse;min-width:0;margin-top:8px}
-#sheet th{background:var(--t);color:#111;text-align:left;padding:6px;font-size:.85rem}
-#sheet td{padding:6px;border-bottom:1px solid #D0DCDF;vertical-align:top}
-#sheet .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-#sheet tfoot td{border:0;font-weight:700;font-size:1.05rem;padding-top:10px}
-#sheet .hint{margin-top:14px;font-size:.88rem}
-#sheet .pay{margin-top:14px;white-space:pre-line}
-#sheet .foot{border-top:3px solid var(--c);display:grid;grid-template-columns:1fr .9fr 1.4fr;gap:16px;font-size:.8rem;line-height:1.4}
-#sheet .foot h4{margin:0 0 3px;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6B7780;font-weight:600}
-#sheet .foot div{white-space:pre-line;overflow-wrap:anywhere}
-#sheet .blk{color:#111}
-#sheet .gry{color:#6B7780}
-.wrap{overflow-x:auto}
-@media(max-width:560px){#sheet .foot{grid-template-columns:1fr}}
-@page{size:A4;margin:0}
-@media print{body{background:#fff}.noprint{display:none!important}main{padding:0;max-width:none}.wrap{overflow:visible}#sheet{border:0;border-radius:0;width:210mm;min-height:297mm}#sheet .band{padding:8mm 15mm}#sheet .body{padding:10mm 15mm}#sheet .foot{grid-template-columns:1fr .9fr 1.4fr!important}}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
@@ -62,7 +37,8 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
 <body>
 <main>
 <h1 class="noprint">Honorarrechnung</h1>
-<p class="sub noprint">Die Werte kommen aus dem Stundenzettel. <a href="stundenzettel.html">Zum Stundenzettel</a></p>
+<p class="sub noprint">Die Werte kommen aus dem Stundenzettel. <a href="stundenzettel.html">Zum Stundenzettel</a> · <a href="meine-daten.html">Meine Daten</a></p>
+<p id="mdHint" class="note noprint" hidden>Bitte zuerst <a href="meine-daten.html">Meine Daten</a> ausfüllen (Absender, Bankverbindung, Logo).</p>
 
 <section class="noprint">
   <h2>1. Daten aus dem Stundenzettel</h2>
@@ -84,7 +60,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
   </div>
 </section>
 
-<section class="noprint">
+<section class="noprint" hidden>
   <details id="meine">
     <summary>3. Meine Daten (einmal eintragen, wird gespeichert)</summary>
     <div class="grid">
@@ -97,6 +73,7 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
       <label>BIC (optional)<input id="mBic"></label>
       <label>Kilometersatz (€ je km)<input id="mKmSatz" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 0,30"></label>
       <label>Zahlungsziel (Tage)<input id="mTage" type="number" min="0" step="1" inputmode="numeric" value="14"></label>
+      <label>Mail-Name<input id="mMailName"></label><label>Kontoinhaber<input id="mKontoinhaber"></label><label>Bank<input id="mBank"></label>
       <label>Farbe der Balken (wird aus dem Logo gewählt)<input id="mFarbe" type="color" value="#0E5A61"></label>
     </div>
     <div class="actions">
@@ -109,36 +86,44 @@ details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10
 </section>
 
 <section class="noprint">
-  <h2>Vorschau</h2>
+  <h2>Vorschau (PDF)</h2>
+  <iframe id="pdf" title="Vorschau der Rechnung" style="width:100%;height:min(138vw,880px);border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>
+  <p id="pdfStatus" class="note"></p>
+  <div class="actions">
+    <button id="pdfOpen" class="sec">PDF groß öffnen</button>
+    <button id="pdfSave">PDF speichern / teilen</button>
+  </div>
 </section>
-<div class="wrap"><article id="sheet"></article></div>
 
-<section class="noprint" style="margin-top:14px">
+<section class="noprint">
   <h2>Fertig</h2>
   <div class="actions">
-    <button id="print">Drucken / als PDF speichern</button>
     <button class="sec" id="save">Rechnung speichern</button>
     <a class="btn sec" id="mail" href="#">Mail vorbereiten</a>
   </div>
-  <p class="note">Die Mail enthält nur den Text. Speichere die Rechnung zuerst als PDF und hänge sie in der Mail-App an.</p>
+  <p class="note">Die Mail enthält nur den Text. Speichere das PDF zuerst und hänge es in der Mail-App an.</p>
   <p id="msg2" class="note"></p>
 </section>
 </main>
 
+<script src="pdf-lib.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const num = v => parseFloat(String(v == null ? '' : v).replace(',', '.')) || 0;
 const mins = s => { if (!s) return null; const [h, m] = s.split(':').map(Number); return h * 60 + m; };
-const MEINE = ['mName','mAdresse','mTel','mMail','mSteuer','mIban','mBic','mKmSatz','mTage','mFarbe'];
+const MEINE = ['mName','mMailName','mAdresse','mTel','mMail','mSteuer','mKontoinhaber','mBank','mIban','mBic','mKmSatz','mTage','mFarbe'];
 let logo = '', stunden = null;
 
 /* ---------- Berechnung aus dem Stundenzettel ---------- */
 function berechne(st) {
   const head = (st && st.head) || {};
-  const z = id => num(head[id]) / 100;
-  const r = { T: 0, N: 0, W: 0, F: 0, lohn: num(head.lohn), zN: z('zNacht'), zW: z('zWe'), zF: z('zFt'), tage: [] };
+  let md = {}; try { md = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
+  const dmap = { zNacht: 'mZuNacht', zWe: 'mZuWe', zFt: 'mZuFt', lohn: 'mStundenlohn' };
+  const val = id => (head[id] !== undefined && head[id] !== '') ? num(head[id]) : num(md[dmap[id]]);
+  const z = id => val(id) / 100;
+  const r = { T: 0, N: 0, W: 0, F: 0, lohn: val('lohn'), zN: z('zNacht'), zW: z('zWe'), zF: z('zFt'), tage: [] };
   ((st && st.rows) || []).forEach(row => {
     const v = mins(row.v), b = mins(row.b);
     if (v === null || b === null) return;
@@ -177,59 +162,151 @@ function faellig() {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+/* ---------- PDF ---------- */
+const MM = v => v * 72 / 25.4, PH = 841.89;
+const ANREDE = 'Sehr geehrte Damen und Herren,';
+const EINLEITUNG = 'Für die von mir erbrachten pflegefachlichen Leistungen und Tätigkeiten stelle ich Ihnen nachfolgend mein vereinbartes Honorar in Rechnung.';
+let pdfUrl = '', pdfTimer = 0, pdfBlob = null; const logoCache = {};
+const hexRgb = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); const v = m ? m[1] : '1F5A3A'; return [0, 2, 4].map(i => parseInt(v.slice(i, i + 2), 16)); };
+
+async function logoBild(tint) {
+  const src = logo || 'logo-mark.png';
+  const key = src.length + ':' + src.slice(-40) + tint.join(',');
+  if (logoCache[key]) return logoCache[key];
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  const h = 240, w = Math.max(1, Math.round(img.width * h / img.height));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  x.fillStyle = 'rgb(' + tint.join(',') + ')'; x.fillRect(0, 0, w, h);
+  x.globalCompositeOperation = 'multiply'; x.drawImage(img, 0, 0, w, h);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  return logoCache[key] = { bytes: new Uint8Array(await blob.arrayBuffer()), w, h };
+}
+
+async function baueRechnungPdf() {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const { P, sum } = positionen();
+  const nr = $('rNr').value.trim(), name = $('mName').value.trim(), fae = faellig();
+  const doc = await PDFDocument.create();
+  doc.setTitle('Rechnung ' + nr); if (name) doc.setAuthor(name);
+  const pg = doc.addPage([595.28, PH]);
+  const F = await doc.embedFont(StandardFonts.Helvetica), B = await doc.embedFont(StandardFonts.HelveticaBold);
+  const c0 = hexRgb($('mFarbe').value), GR = rgb(c0[0] / 255, c0[1] / 255, c0[2] / 255);
+  const t255 = c0.map(v => Math.round(255 - (255 - v) * 0.14)), TINT = rgb(t255[0] / 255, t255[1] / 255, t255[2] / 255);
+  const INK = rgb(.07, .07, .07), GRAY = rgb(.42, .47, .5), HAIR = rgb(.85, .87, .83);
+  const safe = (s, f) => { let o = ''; for (const ch of String(s == null ? '' : s)) { try { f.encodeText(ch); o += ch; } catch (e) { const b = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); try { f.encodeText(b); o += b; } catch (e2) { o += '?'; } } } return o; };
+  const W = (s, f, z) => f.widthOfTextAtSize(safe(s, f), z);
+  const T = (s, x, y, o) => { o = o || {}; const f = o.f || F, z = o.z || 10, t = safe(s, f), w = f.widthOfTextAtSize(t, z);
+    pg.drawText(t, { x: o.a === 'r' ? MM(x) - w : o.a === 'c' ? MM(x) - w / 2 : MM(x), y: PH - MM(y), size: z, font: f, color: o.c || INK }); };
+  const R = (x, y, w, h, c) => pg.drawRectangle({ x: MM(x), y: PH - MM(y + h), width: MM(w), height: MM(h), color: c });
+  const L = (x1, y, x2, t) => pg.drawLine({ start: { x: MM(x1), y: PH - MM(y) }, end: { x: MM(x2), y: PH - MM(y) }, thickness: t || .5, color: HAIR });
+  const wrap = (s, f, z, wmm) => { const out = []; String(s).split('\n').forEach(par => { let line = ''; par.split(/\s+/).filter(Boolean).forEach(w => { const t = line ? line + ' ' + w : w; if (line && W(t, f, z) > MM(wmm)) { out.push(line); line = w; } else line = t; }); out.push(line); }); return out; };
+  const wrapSeg = (segs, z, wmm) => { const lines = [[]]; let w = 0;
+    segs.forEach(([t, f]) => t.split(/(\s+)/).forEach(tok => { if (!tok) return; const tw = W(tok, f, z), cur = lines[lines.length - 1];
+      if (/^\s+$/.test(tok)) { if (cur.length) { const sw = W(' ', f, z); cur.push([' ', f, sw]); w += sw; } return; }
+      if (w + tw > MM(wmm) && cur.length) { lines.push([]); w = 0; }
+      lines[lines.length - 1].push([tok, f, tw]); w += tw; })); return lines; };
+
+  // Kopfband
+  R(0, 0, 210, 26, TINT); R(0, 24.8, 210, 1.2, GR);
+  try {
+    const lg = await logoBild(t255), im = await doc.embedPng(lg.bytes);
+    let hh = 18, ww = hh * lg.w / lg.h; if (ww > 70) { ww = 70; hh = ww * lg.h / lg.w; }
+    pg.drawImage(im, { x: MM(15), y: PH - MM(3.5 + hh), width: MM(ww), height: MM(hh) });
+  } catch (e) { if (name) T(name, 15, 15, { f: B, z: 14, c: GR }); }
+  T('Honorarrechnung', 195, 16, { f: B, z: 22, c: GR, a: 'r' });
+
+  // Daten: Empfänger links, Rechnungsdaten rechts
+  const empf = $('rEmpf').value.split('\n').map(s => s.trim()).filter(Boolean);
+  T('Rechnungsempfänger', 15, 40, { z: 7.5, c: GRAY });
+  let yl = 46; empf.forEach((l, i) => { T(l, 15, yl, { f: i ? F : B, z: 11 }); yl += 5; });
+  const rows = [['Rechnungsnr.', nr, 1], ['Rechnungsdatum', $('rDatum').value], ['Leistungszeitraum', $('rZeit').value], ['Bereich / Station', $('rBereich').value], ['Steuernummer', $('mSteuer').value]].filter(r => r[1]);
+  let yr = 40; rows.forEach(r => { T(r[0], 120, yr, { z: 9, c: GRAY }); T(r[1], 195, yr, { f: r[2] ? B : F, z: 10, a: 'r' }); L(120, yr + 1.6, 195, .4); yr += 5.6; });
+  const y0 = Math.max(yl - 3, yr - 4);
+
+  // Maße für die Anordnung
+  const LH = 5.6, intro = wrap(EINLEITUNG, F, 11, 180);
+  const items = P.map(p => ({ p, lines: wrap(p.t, F, 10, 101) })).map(o => Object.assign(o, { h: Math.max(9, o.lines.length * 4.6 + 4.4) }));
+  const tableH = 8 + items.reduce((a, o) => a + o.h, 0) + 12;
+  const pay = wrapSeg(fae ? [['Bitte überweisen Sie den Betrag bis zum ', F], [fae, B], [' unter Angabe der Rechnungsnummer auf das unten genannte Konto.', F]] : [['Bitte überweisen Sie den Betrag unter Angabe der Rechnungsnummer auf das unten genannte Konto.', F]], 10, 180);
+  const hint = wrap('Leistungen von Pflegefachkräften nach § 4 Nr. 14 UStG sind von der Umsatzsteuer befreit.', F, 10, 180);
+  const endFor = G => y0 + G + 4 + 2 * LH + (intro.length - 1) * LH + LH + 1 + tableH + 9 + (hint.length + pay.length) * 4.8 + 6;
+  let G = 33; if (endFor(G) > 258) G = Math.max(8, G - (endFor(G) - 258));
+
+  // Anrede und Einleitung
+  let y = y0 + G + 4;
+  T(ANREDE, 15, y, { z: 11 });
+  y += 2 * LH; intro.forEach((l, i) => T(l, 15, y + i * LH, { z: 11 })); y += (intro.length - 1) * LH + LH + 1;
+
+  // Tabelle
+  R(15, y, 180, 8, TINT);
+  T('Leistung', 17, y + 5.4, { f: B, z: 9 }); T('Menge', 142, y + 5.4, { f: B, z: 9, a: 'r' }); T('Einzelpreis', 168, y + 5.4, { f: B, z: 9, a: 'r' }); T('Betrag', 193, y + 5.4, { f: B, z: 9, a: 'r' });
+  y += 8;
+  items.forEach(o => { const p = o.p;
+    o.lines.forEach((l, i) => T(l, 17, y + 5.6 + i * 4.6, { z: 10 }));
+    T(fmt(p.q) + ' ' + p.u, 142, y + 5.6, { z: 10, a: 'r' }); T(fmt(p.e) + ' €', 168, y + 5.6, { z: 10, a: 'r' }); T(fmt(Math.round(p.b * 100) / 100) + ' €', 193, y + 5.6, { z: 10, a: 'r' });
+    y += o.h; L(15, y, 195, .5); });
+  R(150, y + 2, 45, 9, TINT);
+  T('Rechnungsbetrag', 147, y + 8.2, { f: B, z: 11, a: 'r' }); T(fmt(sum) + ' €', 193, y + 8.2, { f: B, z: 12, a: 'r' });
+  y += 12 + 9;
+
+  // Hinweis und Zahlung
+  hint.forEach((l, i) => T(l, 15, y + i * 4.8, { z: 10 })); y += hint.length * 4.8 + 1.5;
+  pay.forEach((ln, i) => { let x = MM(15); ln.forEach(([s, f, w]) => { pg.drawText(safe(s, f), { x, y: PH - MM(y + i * 4.8), size: 10, font: f, color: INK }); x += w; }); });
+
+  // Fußband
+  R(0, 265, 210, 32, TINT); R(0, 265, 210, 1.2, GR);
+  const col = (x, kopf, zeilen) => { T(kopf.toUpperCase(), x, 272.5, { f: B, z: 6.5, c: GRAY }); let yy = 277.5; zeilen.forEach(z => { T(z.t, x, yy, { f: z.b ? B : F, z: 8.5, c: z.g ? GRAY : INK }); yy += 4.3; }); };
+  const adr = $('mAdresse').value.split('\n').map(s => s.trim()).filter(Boolean);
+  col(15, 'Anschrift', [{ t: name, b: 1 }].concat(adr.map(t => ({ t, g: 1 }))));
+  col(72, 'Kontakt', [$('mTel').value && 'Tel.: ' + $('mTel').value, $('mMail').value].filter(Boolean).map(t => ({ t, g: 1 })));
+  col(124, 'Bankverbindung', [$('mKontoinhaber').value, $('mBank').value, $('mIban').value && 'IBAN: ' + $('mIban').value, $('mBic').value && 'BIC: ' + $('mBic').value].filter(Boolean).map(t => ({ t })));
+  return new Blob([await doc.save()], { type: 'application/pdf' });
+}
+
+function schedulePdf() { clearTimeout(pdfTimer); pdfTimer = setTimeout(zeigePdf, 350); }
+async function zeigePdf() {
+  const st = $('pdfStatus');
+  if (typeof PDFLib === 'undefined') { st.textContent = 'Für die Vorschau fehlt die Datei pdf-lib.min.js im GitHub-Ordner.'; return; }
+  try {
+    pdfBlob = await baueRechnungPdf();
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    pdfUrl = URL.createObjectURL(pdfBlob);
+    $('pdf').src = pdfUrl + '#toolbar=0&navpanes=0&view=FitH';
+    st.textContent = '';
+  } catch (e) { st.textContent = 'Die Vorschau konnte nicht erstellt werden.'; }
+}
+const pdfName = () => 'Rechnung-' + ($('rNr').value.trim() || 'neu').replace(/[^\w.-]+/g, '_') + '.pdf';
+$('pdfOpen').onclick = () => { if (pdfUrl) window.open(pdfUrl, '_blank'); };
+$('pdfSave').onclick = async () => {
+  if (!pdfBlob) return;
+  const file = new File([pdfBlob], pdfName(), { type: 'application/pdf' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: pdfName() }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = pdfUrl; a.download = pdfName(); document.body.appendChild(a); a.click(); a.remove();
+};
+
 /* ---------- Vorschau ---------- */
 function render() {
   const { P, sum } = positionen();
   const bereich = $('rBereich').value.trim();
   const zeit = $('rZeit').value.trim();
   const fae = faellig();
-  const col = $('mFarbe').value || '#0E5A61';
-  const rgb = [1, 3, 5].map(i => parseInt(col.slice(i, i + 2), 16));
-  const sh = $('sheet');
-  sh.style.setProperty('--c', col);
-  sh.style.setProperty('--t', 'rgba(' + rgb.join(',') + ',.14)');
-  const bank = [$('mIban').value && 'IBAN: ' + $('mIban').value, $('mBic').value && 'BIC: ' + $('mBic').value].filter(Boolean).join('\n');
-  const kont = [$('mTel').value && 'Tel.: ' + $('mTel').value, $('mMail').value].filter(Boolean).join('\n');
-  sh.innerHTML = `
-    <div class="band head">
-      <div>${logo ? '<img class="logo" alt="Logo" src="' + logo + '">' : '<strong>' + esc($('mName').value) + '</strong>'}</div>
-      <div class="title">Honorarrechnung</div>
-    </div>
-    <div class="body">
-      <div class="meta">
-        <div class="empf">${esc($('rEmpf').value)}</div>
-        <div>
-          <div>Rechnungsnr.: <strong>${esc($('rNr').value)}</strong></div>
-          <div>Datum: ${esc($('rDatum').value)}</div>
-          ${$('mSteuer').value ? '<div>Steuernummer: ' + esc($('mSteuer').value) + '</div>' : ''}
-        </div>
-      </div>
-      <div>${zeit ? 'Leistungszeitraum: ' + esc(zeit) : ''}${bereich ? (zeit ? ' · ' : '') + 'Bereich / Station: ' + esc(bereich) : ''}</div>
-      <table>
-        <thead><tr><th>Leistung</th><th class="r">Menge</th><th class="r">Einzelpreis</th><th class="r">Betrag</th></tr></thead>
-        <tbody>${P.map(p => `<tr><td>${esc(p.t)}</td><td class="r">${fmt(p.q)} ${p.u}</td><td class="r">${fmt(p.e)} €</td><td class="r">${fmt(Math.round(p.b * 100) / 100)} €</td></tr>`).join('')}</tbody>
-        <tfoot><tr><td colspan="3" class="r">Rechnungsbetrag</td><td class="r">${fmt(sum)} €</td></tr></tfoot>
-      </table>
-      <p class="hint">Leistungen von Pflegefachkräften nach § 4 Nr. 14 UStG sind von der Umsatzsteuer befreit.</p>
-      <p class="pay">${fae ? 'Bitte überweisen Sie den Betrag bis zum <strong>' + fae + '</strong>' : 'Bitte überweisen Sie den Betrag'} unter Angabe der Rechnungsnummer auf das unten genannte Konto.</p>
-    </div>
-    <div class="band foot">
-      <div><h4>Anschrift</h4><div class="blk"><strong>${esc($('mName').value)}</strong></div><div class="gry">${esc($('mAdresse').value)}</div></div>
-      <div><h4>Kontakt</h4><div class="gry">${esc(kont)}</div></div>
-      <div><h4>Bankverbindung</h4><div class="blk">${esc(bank)}</div></div>
-    </div>`;
-  const body = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie meine Rechnung Nr. ' + $('rNr').value +
-    (zeit ? ' für den Zeitraum ' + zeit : '') + '. Den Rechnungsbetrag von ' + fmt(sum) + ' € bitte ich bis zum ' + (fae || '[Datum]') +
-    ' auf das in der Rechnung genannte Konto zu überweisen.\n\nBei Rückfragen melde ich mich gern. Ich bedanke mich für Ihr Vertrauen und würde mich freuen, auch künftig für Sie tätig sein zu dürfen.\n\nMit freundlichen Grüßen\n' + $('mName').value;
+  const dd = zeit.match(/\d{1,2}\.\d{1,2}\.\d{4}/g) || [];
+  const zt = dd.length >= 2 ? 'für den Zeitraum vom ' + dd[0] + ' bis zum ' + dd[dd.length - 1] : dd.length === 1 ? 'für den Einsatz am ' + dd[0] : zeit ? 'für den Zeitraum ' + zeit : '';
+  const body = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie meine Rechnung Nr. ' + $('rNr').value + (zt ? ' ' + zt : '') + '.\n\nIch bitte Sie, den Rechnungsbetrag in Höhe von ' + fmt(sum) + ' € bis zum ' + (fae || '[Datum]') + ' auf das in der Rechnung angegebene Konto zu überweisen.\n\nBei Rückfragen stehe ich Ihnen gerne zur Verfügung.\n\nIch bedanke mich für Ihr Vertrauen und würde mich freuen, auch künftig für Sie tätig sein zu dürfen.\n\nMit freundlichen Grüßen\n\n' + ($('mMailName').value || $('mName').value);
   $('mail').href = 'mailto:' + encodeURIComponent($('rMail').value).replace('%40', '@') +
     '?subject=' + encodeURIComponent('Rechnung Nr. ' + $('rNr').value) + '&body=' + encodeURIComponent(body);
+  $('mdHint').hidden = !!($('mName').value && $('mIban').value);
+  schedulePdf();
 }
 
 /* ---------- Speichern / Laden ---------- */
 function saveMeine() {
   try {
-    const o = { logo };
-    MEINE.forEach(k => o[k] = $(k).value);
+    let o = {}; try { o = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
+    o.logo = logo; MEINE.forEach(k => o[k] = $(k).value);
     localStorage.setItem('meineDaten', JSON.stringify(o));
   } catch (e) {}
 }
@@ -321,7 +398,6 @@ document.addEventListener('input', e => {
   render();
 });
 $('reload').onclick = ladeStunden;
-$('print').onclick = () => window.print();
 $('save').onclick = () => {
   const { P, sum } = positionen();
   const list = rechnungen();
@@ -358,6 +434,7 @@ $('rDatum').value = new Date().toLocaleDateString('de-DE', { day: '2-digit', mon
 $('rNr').value = nextNr();
 if (!$('mName').value) $('meine').open = true;
 ladeStunden();
+window.addEventListener('pageshow', e => { if (e.persisted) { loadMeine(); ladeStunden(); } });
 </script>
 </body>
 </html>
