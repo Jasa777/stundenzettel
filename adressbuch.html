@@ -49,6 +49,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   <label>Anschrift (Straße, PLZ Ort)<textarea id="adr" rows="3"></textarea></label>
   <label>E-Mail für Rechnungen<input id="mail" type="email" inputmode="email" autocomplete="off"></label>
   <label>Telefon (optional)<input id="tel" inputmode="tel" autocomplete="off"></label>
+  <label>Bereich / Station (optional)<input id="bereich" autocomplete="off"></label>
+  <label>Kilometer für die Rechnung (Fahrtkosten, optional)<input id="km" type="number" min="0" step="0.1" inputmode="decimal"></label>
   <div class="actions">
     <button id="save">Speichern</button>
     <button class="sec" id="cancel" hidden>Abbrechen</button>
@@ -64,7 +66,7 @@ let edit = null;
 function lade() { try { return JSON.parse(localStorage.getItem('adressbuch') || '[]'); } catch (e) { return []; } }
 function sichern(l) { try { localStorage.setItem('adressbuch', JSON.stringify(l)); return true; } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; return false; } }
 
-function leeren() { edit = null; ['name', 'adr', 'mail', 'tel'].forEach(k => $(k).value = ''); $('ft').textContent = 'Neuer Kunde'; $('cancel').hidden = true; }
+function leeren() { edit = null; ['name', 'adr', 'mail', 'tel', 'bereich', 'km'].forEach(k => $(k).value = ''); $('ft').textContent = 'Neuer Kunde'; $('cancel').hidden = true; }
 
 function zeige() {
   const q = $('q').value.trim().toLowerCase();
@@ -72,7 +74,7 @@ function zeige() {
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
   $('list').innerHTML = l.length ? l.map(k => `<div class="card">
     <div class="hl"><span class="av">${esc(k.name.charAt(0).toUpperCase())}</span><div class="nm">${esc(k.name)}</div></div>
-    <div class="mut">${esc(k.adresse)}${k.mail ? '\n' + esc(k.mail) : ''}${k.tel ? '\nTel.: ' + esc(k.tel) : ''}</div>
+    <div class="mut">${esc(k.adresse)}${k.mail ? '\n' + esc(k.mail) : ''}${k.tel ? '\nTel.: ' + esc(k.tel) : ''}${k.bereich ? '\nBereich / Station: ' + esc(k.bereich) : ''}${k.km ? '\nKilometer: ' + esc(k.km) : ''}</div>
     <div class="actions"><button class="sec" data-a="e" data-id="${esc(k.id)}">Bearbeiten</button><button class="del" data-a="d" data-id="${esc(k.id)}">Löschen</button></div>
   </div>`).join('') : '<p class="mut">' + (q ? 'Nichts gefunden.' : 'Noch kein Kunde gespeichert.') + '</p>';
 }
@@ -81,7 +83,7 @@ $('save').onclick = () => {
   const name = $('name').value.trim();
   if (!name) { $('msg').textContent = 'Bitte einen Namen eintragen.'; $('name').focus(); return; }
   const l = lade();
-  const k = { id: edit || String(Date.now()), name, adresse: $('adr').value.trim(), mail: $('mail').value.trim(), tel: $('tel').value.trim() };
+  const k = { id: edit || String(Date.now()), name, adresse: $('adr').value.trim(), mail: $('mail').value.trim(), tel: $('tel').value.trim(), bereich: $('bereich').value.trim(), km: $('km').value.trim() };
   const i = l.findIndex(x => x.id === k.id);
   if (i >= 0) l[i] = k; else l.push(k);
   if (sichern(l)) { $('msg').textContent = '„' + name + '“ gespeichert.'; leeren(); zeige(); }
@@ -92,7 +94,7 @@ $('list').addEventListener('click', e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const l = lade(), k = l.find(x => x.id === b.dataset.id); if (!k) return;
   if (b.dataset.a === 'e') {
-    edit = k.id; $('name').value = k.name; $('adr').value = k.adresse; $('mail').value = k.mail; $('tel').value = k.tel || '';
+    edit = k.id; $('name').value = k.name; $('adr').value = k.adresse; $('mail').value = k.mail; $('tel').value = k.tel || ''; $('bereich').value = k.bereich || ''; $('km').value = k.km || '';
     $('ft').textContent = 'Kunde bearbeiten'; $('cancel').hidden = false; $('msg').textContent = ''; $('ft').scrollIntoView(); $('name').focus();
   } else if (confirm('„' + k.name + '“ wirklich löschen? Bereits gespeicherte Rechnungen bleiben unverändert.')) {
     sichern(l.filter(x => x.id !== k.id)); if (edit === k.id) leeren(); zeige();

@@ -49,6 +49,13 @@ input[type=color]{height:44px;padding:3px}
 </section>
 
 <section>
+  <h2>Rechnungsnummer</h2>
+  <label>Nächste Rechnungsnummer<input id="mRechnungsnr" autocomplete="off"></label>
+  <p class="note">Diese Nummer bekommt die nächste Rechnung. Danach zählt sie automatisch um 1 weiter. Eine Änderung gilt erst nach zwei Bestätigungen, sonst springt die Nummer auf die alte zurück.</p>
+  <p id="nrMsg" class="note"></p>
+</section>
+
+<section>
   <h2>Bankverbindung</h2>
   <div class="grid">
     <label>Kontoinhaber (optional)<input id="mKontoinhaber" autocomplete="off"></label>
@@ -99,6 +106,18 @@ function sichern() {
   catch (e) { $('ok').textContent = 'Speichern war nicht möglich.'; }
 }
 document.addEventListener('input', e => { if (KEYS.indexOf(e.target.id) >= 0) sichern(); });
+/* Rechnungsnummer: nur nach zweifacher Bestätigung ändern */
+if (!o.mRechnungsnr) { o.mRechnungsnr = new Date().getFullYear() + '-001'; sichern(); }
+$('mRechnungsnr').value = o.mRechnungsnr;
+$('mRechnungsnr').addEventListener('change', () => {
+  const neu = $('mRechnungsnr').value.trim(), alt = o.mRechnungsnr;
+  if (!neu || neu === alt) { $('mRechnungsnr').value = alt; return; }
+  const ok = confirm('WARNUNG: Du änderst die nächste Rechnungsnummer von „' + alt + '“ auf „' + neu + '“.\n\nFalsche oder doppelte Rechnungsnummern können Probleme mit dem Finanzamt verursachen. Möchtest du die Nummer wirklich ändern?') &&
+    confirm('LETZTE BESTÄTIGUNG: Die nächste Rechnung bekommt die Nummer „' + neu + '“. Alle weiteren Rechnungen zählen ab dieser Nummer weiter.\n\nJetzt wirklich ändern?');
+  if (ok) { o.mRechnungsnr = neu; sichern(); $('nrMsg').textContent = 'Die nächste Rechnungsnummer ist jetzt ' + neu + '.'; }
+  else { $('mRechnungsnr').value = alt; $('nrMsg').textContent = 'Die Nummer wurde nicht geändert. Es bleibt ' + alt + '.'; }
+});
+
 async function logoLaden(file) {
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, 500 / bmp.width), c = document.createElement('canvas');

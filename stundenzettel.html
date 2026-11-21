@@ -26,6 +26,9 @@ button:focus-visible,.btn:focus-within,input:focus-visible{outline:3px solid var
 label{display:block;font-size:.88rem;color:var(--mut)}
 input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
 .wrap{overflow-x:auto}
+.full{grid-column:1/-1}
+select{font:inherit;color:var(--ink);border:1px solid var(--line);padding:7px 8px;width:100%}
+input[readonly]{background:#EFEBDD;color:var(--mut)}
 table{border-collapse:collapse;width:100%;min-width:880px}
 th{font-size:.82rem;text-align:left;color:var(--mut);font-weight:600;padding:4px 4px 6px}
 td{padding:3px 3px}
@@ -74,10 +77,13 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
 <section>
   <h2>Kopf</h2>
   <div class="grid">
+    <label>Rechnungsnummer (aus Meine Daten)<input id="rnr" readonly></label>
+    <label class="full">Kunde aus dem Adressbuch wählen (<a href="adressbuch.html">Kunden verwalten</a>)<select id="kunde"><option value="">– keine Auswahl –</option></select></label>
     <label>Zeitraum<input id="zeitraum" placeholder="TT.MM.JJJJ – TT.MM.JJJJ" inputmode="numeric"></label>
-    <label>Auftraggeber<input id="auftraggeber"></label>
+    <label class="full">Auftraggeber (Name und Anschrift)<textarea id="auftraggeber" rows="3"></textarea></label>
     <label>Auftragnehmer<input id="auftragnehmer"></label>
     <label>Bereich / Station<input id="bereich"></label>
+    <label>Kilometer für die Rechnung<input id="km" type="number" min="0" step="0.1" inputmode="decimal"></label>
     <label>Stundenlohn (€)<input id="lohn" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 45,00"></label>
     <label>Zuschlag Nacht (%)<input id="zNacht" type="number" min="0" step="0.5" value="25"></label>
     <label>Zuschlag Wochenende (%)<input id="zWe" type="number" min="0" step="0.5" value="25"></label>
@@ -112,13 +118,16 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
   </div>
   <p class="note">Die Nachtstunden werden aus von/bis berechnet, die Pause bleibt dabei unberücksichtigt. Der Stundenlohn gilt für alle Zeilen, Zuschläge werden auf den Stundenlohn der jeweiligen Stunden aufgeschlagen.</p>
 </section>
+<section class="noprint">
+  <a class="btn big" href="rechnung.html" id="toRe">Weiter zur Rechnung</a>
+</section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const rowsEl = $('rows');
-const HEAD = ['zeitraum','auftraggeber','auftragnehmer','bereich','lohn','zNacht','zWe','zFt'];
+const HEAD = ['zeitraum','auftraggeber','auftragnehmer','bereich','lohn','zNacht','zWe','zFt','kunde','km'];
 const fmt = n => n.toFixed(2).replace('.', ',');
 const mins = s => { if(!s) return null; const [h,m] = s.split(':').map(Number); return h*60+m; };
 
@@ -232,11 +241,12 @@ document.addEventListener('input', e => {
   e.target.classList.remove('ocr');
   calc(); save();
 });
+$('toRe').addEventListener('click', () => save());
 $('add').onclick = () => { addRow(); calc(); };
 $('print').onclick = () => window.print();
 $('reset').onclick = () => {
   if (!confirm('Wirklich alle Einträge löschen?')) return;
-  rowsEl.innerHTML = ''; HEAD.slice(0, 5).forEach(k => $(k).value = ''); prefillStandard();
+  rowsEl.innerHTML = ''; HEAD.slice(0, 5).forEach(k => $(k).value = ''); $('kunde').value = ''; $('km').value = ''; prefillStandard();
   for (let i = 0; i < 10; i++) addRow();
   calc(); save();
 };
@@ -348,6 +358,24 @@ $('file').addEventListener('change', async e => {
   e.target.value = '';
 });
 
+function fuelleKunden() {
+  let l = []; try { l = JSON.parse(localStorage.getItem('adressbuch') || '[]') || []; } catch (e) {}
+  l.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  $('kunde').innerHTML = '<option value="">– keine Auswahl –</option>' + l.map(k => '<option value="' + k.id + '">' + k.name.replace(/[&<>"]/g, '') + '</option>').join('');
+  return l;
+}
+const kundenListe = fuelleKunden();
+$('kunde').addEventListener('change', () => {
+  const k = kundenListe.find(x => x.id === $('kunde').value); if (!k) return;
+  $('auftraggeber').value = k.name + (k.adresse ? '\n' + k.adresse : '');
+  $('bereich').value = k.bereich || ''; $('km').value = k.km || '';
+  calc(); save();
+});
+function zeigeRnr() {
+  let m = {}; try { m = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
+  $('rnr').value = m.mRechnungsnr || (new Date().getFullYear() + '-001');
+}
+zeigeRnr();
 if (!load()) for (let i = 0; i < 10; i++) addRow();
 function prefillStandard() {
   let m = {}; try { m = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}

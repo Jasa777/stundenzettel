@@ -2,108 +2,100 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
-<meta name="theme-color" content="#1F6B3A">
-<title>Honorarrechnung</title>
+<meta name="theme-color" content="#1F5A3A">
+<title>Rechnung</title>
 <style>
-:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--warn:#FFF0C7;--warn-ln:#D9A400;--ocr:#DFF1EE;--acc:#E88A1A;color-scheme:light}
-@media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--warn:#4A3B0A;--warn-ln:#D9A400;--ocr:#16403F;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:980px;margin:0 auto;padding:16px}
-h1{font-size:1.7rem;margin:8px 0 2px;letter-spacing:-.01em}
-.sub{color:var(--mut);margin:0 0 16px}
-section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+body{margin:0;color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:820px;margin:0 auto;padding:16px}
+h1{font-size:1.7rem;margin:8px 0 2px}
+.sub{color:var(--mut);margin:0 0 14px}
+section{border:1px solid var(--line);padding:14px;margin-bottom:14px}
 h2{font-size:1.05rem;margin:0 0 10px}
-button,.btn{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:10px 16px;cursor:pointer;display:inline-block;text-decoration:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 12px}
+.kv dt{color:var(--mut);font-size:.9rem}
+.kv dd{margin:0;white-space:pre-line;font-weight:600;overflow-wrap:anywhere}
+.kv dd.leer{color:var(--bad);font-weight:400}
+.pos{padding:8px 0;border-bottom:1px solid var(--line)}
+.pm{display:flex;justify-content:space-between;gap:10px;color:var(--mut);font-variant-numeric:tabular-nums}
+.pm b{color:var(--ink);white-space:nowrap}
+.tot{display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem;padding:10px 0 12px}
+button,.btn{font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+button{background:var(--pri);color:var(--pri-ink);border:0;padding:10px 16px}
 button.sec,.btn.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
-button:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--warn-ln);outline-offset:1px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-.full{grid-column:1/-1}
-label{display:block;font-size:.88rem;color:var(--mut)}
-input,textarea,select{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
-input.ocr{background:var(--ocr)}
-#file{position:absolute;opacity:0;width:1px;height:1px}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-.note{font-size:.85rem;color:var(--mut)}
-#msg{margin:8px 0 0;color:var(--mut);min-height:1.4em}
-details>summary{cursor:pointer;font-weight:600;color:var(--pri);margin-bottom:10px}
+button:disabled,.btn[aria-disabled=true]{opacity:.45;cursor:not-allowed}
+button.ok{background:#DDEBD5;color:var(--pri);border:1.5px solid var(--pri)}
+button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset:1px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.note{font-size:.88rem;color:var(--mut)}
+.bad{color:var(--bad);font-weight:600}
+#fehler{border-color:var(--bad)}
+#fehler ul{margin:6px 0 0;padding-left:20px}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
 </head>
 <body>
 <main>
-<h1 class="noprint">Honorarrechnung</h1>
-<p class="sub noprint">Die Werte kommen aus dem Stundenzettel. <a href="stundenzettel.html">Zum Stundenzettel</a> · <a href="meine-daten.html">Meine Daten</a></p>
-<p id="mdHint" class="note noprint" hidden>Bitte zuerst <a href="meine-daten.html">Meine Daten</a> ausfüllen (Absender, Bankverbindung, Logo).</p>
+<h1>Rechnung</h1>
+<p class="sub">Alle Angaben kommen automatisch aus Stundenzettel, Kunden und Meine Daten. Prüfe jeden Block und bestätige ihn.</p>
 
-<section class="noprint">
-  <h2>1. Daten aus dem Stundenzettel</h2>
-  <p id="msg">Wird geladen …</p>
-  <div class="actions"><button class="sec" id="reload">Stundenzettel neu übernehmen</button></div>
+<section id="leer" hidden>
+  <h2>Kein Stundenzettel vorhanden</h2>
+  <p>Für eine neue Rechnung brauchst du einen ausgefüllten Stundenzettel mit mindestens einem Einsatz.</p>
+  <a class="btn big" href="stundenzettel.html">Zum Stundenzettel</a>
 </section>
 
-<section class="noprint">
-  <h2>2. Diese Rechnung</h2>
-  <div class="grid">
-    <label>Rechnungsnummer<input id="rNr"></label>
-    <label>Rechnungsdatum<input id="rDatum" placeholder="TT.MM.JJJJ" inputmode="numeric"></label>
-    <label>Leistungszeitraum<input id="rZeit" placeholder="TT.MM.JJJJ – TT.MM.JJJJ" inputmode="numeric"></label>
-    <label class="full">Aus dem Adressbuch wählen (<a href="adressbuch.html">Adressbuch öffnen</a>)<select id="rAdr"><option value="">– keine Auswahl –</option></select></label>
-    <label class="full">Rechnungsempfänger (Name und Anschrift)<textarea id="rEmpf" rows="3"></textarea></label>
-    <label>E-Mail des Empfängers<input id="rMail" type="email" inputmode="email"></label>
-    <label>Bereich / Station (optional)<input id="rBereich"></label>
-    <label>Fahrtkosten: Kilometer gesamt<input id="rKm" type="number" min="0" step="0.1" inputmode="decimal"></label>
-  </div>
-</section>
+<div id="inhalt" hidden>
+  <section id="fehler" hidden>
+    <h2>Bitte zuerst ergänzen</h2>
+    <ul id="fehlerListe"></ul>
+  </section>
 
-<section class="noprint" hidden>
-  <details id="meine">
-    <summary>3. Meine Daten (einmal eintragen, wird gespeichert)</summary>
-    <div class="grid">
-      <label class="full">Name / Firmenname<input id="mName" placeholder="z. B. Vor- und Nachname, Pflegefachkraft"></label>
-      <label class="full">Anschrift<textarea id="mAdresse" rows="3"></textarea></label>
-      <label>Telefon<input id="mTel" inputmode="tel"></label>
-      <label>E-Mail<input id="mMail" type="email" inputmode="email"></label>
-      <label>Steuernummer<input id="mSteuer"></label>
-      <label>IBAN<input id="mIban"></label>
-      <label>BIC (optional)<input id="mBic"></label>
-      <label>Kilometersatz (€ je km)<input id="mKmSatz" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 0,30"></label>
-      <label>Zahlungsziel (Tage)<input id="mTage" type="number" min="0" step="1" inputmode="numeric" value="14"></label>
-      <label>Mail-Name<input id="mMailName"></label><label>Kontoinhaber<input id="mKontoinhaber"></label><label>Bank<input id="mBank"></label>
-      <label>Farbe der Balken (wird aus dem Logo gewählt)<input id="mFarbe" type="color" value="#0E5A61"></label>
-    </div>
+  <section>
+    <h2>1. Empfänger und Zeitraum</h2>
+    <dl class="kv" id="ba"></dl>
+    <button class="conf" data-b="a">Bestätigen</button>
+  </section>
+
+  <section>
+    <h2>2. Leistungen und Beträge</h2>
+    <div id="bb"></div>
+    <button class="conf" data-b="b">Bestätigen</button>
+  </section>
+
+  <section>
+    <h2>3. Absender und Bankverbindung</h2>
+    <dl class="kv" id="bc"></dl>
+    <button class="conf" data-b="c">Bestätigen</button>
+  </section>
+
+  <section>
+    <h2>Vorschau (PDF)</h2>
+    <iframe id="pdf" title="Vorschau der Rechnung" style="width:100%;height:min(138vw,880px);border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>
+    <p id="pdfStatus" class="note"></p>
+  </section>
+
+  <section>
+    <h2>Fertig stellen</h2>
+    <p class="note" id="hinweis">Sobald alle drei Blöcke bestätigt sind, kannst du die Rechnung speichern, drucken oder versenden. Danach bekommt die nächste Rechnung automatisch die nächste Nummer, und der Stundenzettel wird geleert.</p>
     <div class="actions">
-      <label class="btn sec" for="file">Logo wählen</label>
-      <input id="file" type="file" accept="image/*">
-      <button class="sec" id="logoDel">Logo entfernen</button>
+      <button id="aSave" disabled>In Rechnungen speichern</button>
+      <button class="sec" id="aOpen" disabled>Drucken / PDF öffnen</button>
+      <button class="sec" id="aShare" disabled>PDF speichern / teilen</button>
+      <a class="btn sec" id="aMail" href="#" aria-disabled="true">Mail vorbereiten</a>
     </div>
-    <p class="note">Die Daten bleiben nur auf diesem Gerät gespeichert.</p>
-  </details>
-</section>
-
-<section class="noprint">
-  <h2>Vorschau (PDF)</h2>
-  <iframe id="pdf" title="Vorschau der Rechnung" style="width:100%;height:min(138vw,880px);border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>
-  <p id="pdfStatus" class="note"></p>
-  <div class="actions">
-    <button id="pdfOpen" class="sec">PDF groß öffnen</button>
-    <button id="pdfSave">PDF speichern / teilen</button>
-  </div>
-</section>
-
-<section class="noprint">
-  <h2>Fertig</h2>
-  <div class="actions">
-    <button class="sec" id="save">Rechnung speichern</button>
-    <a class="btn sec" id="mail" href="#">Mail vorbereiten</a>
-  </div>
-  <p class="note">Die Mail enthält nur den Text. Speichere das PDF zuerst und hänge es in der Mail-App an.</p>
-  <p id="msg2" class="note"></p>
-</section>
+    <p class="note">Die Mail enthält nur den Text. Speichere das PDF zuerst und hänge es in der Mail-App an.</p>
+    <p id="fertig" style="color:var(--ok);font-weight:600"></p>
+    <div class="actions" id="nach" hidden>
+      <a class="btn" href="rechnungen.html">Zu Rechnungen</a>
+      <a class="btn sec" href="index.html">Zur Startseite</a>
+    </div>
+  </section>
+</div>
 </main>
 
 <script src="pdf-lib.min.js"></script>
@@ -112,54 +104,95 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const num = v => parseFloat(String(v == null ? '' : v).replace(',', '.')) || 0;
+const rd = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
 const mins = s => { if (!s) return null; const [h, m] = s.split(':').map(Number); return h * 60 + m; };
-const MEINE = ['mName','mMailName','mAdresse','mTel','mMail','mSteuer','mKontoinhaber','mBank','mIban','mBic','mKmSatz','mTage','mFarbe'];
-let logo = '', stunden = null;
+const dts = d => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+let D = null, ok = { a: false, b: false, c: false }, fehler = [], done = false;
 
-/* ---------- Berechnung aus dem Stundenzettel ---------- */
 function berechne(st) {
-  const head = (st && st.head) || {};
-  let md = {}; try { md = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
-  const dmap = { zNacht: 'mZuNacht', zWe: 'mZuWe', zFt: 'mZuFt', lohn: 'mStundenlohn' };
-  const val = id => (head[id] !== undefined && head[id] !== '') ? num(head[id]) : num(md[dmap[id]]);
-  const z = id => val(id) / 100;
-  const r = { T: 0, N: 0, W: 0, F: 0, lohn: val('lohn'), zN: z('zNacht'), zW: z('zWe'), zF: z('zFt'), tage: [] };
+  const head = (st && st.head) || {}, md = rd('meineDaten') || {};
+  const map = { zNacht: 'mZuNacht', zWe: 'mZuWe', zFt: 'mZuFt', lohn: 'mStundenlohn' };
+  const val = id => (head[id] !== undefined && head[id] !== '') ? num(head[id]) : num(md[map[id]]);
+  const r = { T: 0, N: 0, W: 0, F: 0, lohn: val('lohn'), zN: val('zNacht') / 100, zW: val('zWe') / 100, zF: val('zFt') / 100 };
   ((st && st.rows) || []).forEach(row => {
     const v = mins(row.v), b = mins(row.b);
     if (v === null || b === null) return;
-    const pause = num(row.p);
-    const end = b <= v ? b + 1440 : b;
-    const h = Math.max(0, end - v - pause) / 60;
-    let nacht = 0;
-    for (let m = v; m < end; m++) { const x = m % 1440; if (x >= 1200 || x < 360) nacht++; }
-    nacht /= 60;
-    r.T += h; r.N += nacht;
-    if (row.we) r.W += h;
-    if (row.ft) r.F += h;
-    if (row.d && r.tage.indexOf(row.d) < 0) r.tage.push(row.d);
+    const end = b <= v ? b + 1440 : b, h = Math.max(0, end - v - num(row.p)) / 60;
+    let n = 0; for (let m = v; m < end; m++) { const x = m % 1440; if (x >= 1200 || x < 360) n++; }
+    n /= 60; r.T += h; r.N += n; if (row.we) r.W += h; if (row.ft) r.F += h;
   });
   return r;
 }
-
-function positionen() {
-  const s = stunden ? berechne(stunden) : berechne(null);
-  const km = num($('rKm').value), satz = num($('mKmSatz').value);
-  const P = [];
-  P.push({ t: 'Pflegefachliche Tätigkeit als Pflegefachkraft (Honorar)', q: s.T, u: 'Std.', e: s.lohn, b: s.T * s.lohn });
-  if (s.N > 0 && s.zN > 0) P.push({ t: 'Nachtzuschlag (20–06 Uhr) ' + Math.round(s.zN * 100 * 100) / 100 + ' %', q: s.N, u: 'Std.', e: s.lohn * s.zN, b: s.N * s.lohn * s.zN });
-  if (s.W > 0 && s.zW > 0) P.push({ t: 'Wochenendzuschlag ' + Math.round(s.zW * 100 * 100) / 100 + ' %', q: s.W, u: 'Std.', e: s.lohn * s.zW, b: s.W * s.lohn * s.zW });
-  if (s.F > 0 && s.zF > 0) P.push({ t: 'Feiertagszuschlag ' + Math.round(s.zF * 100 * 100) / 100 + ' %', q: s.F, u: 'Std.', e: s.lohn * s.zF, b: s.F * s.lohn * s.zF });
-  if (km > 0 && satz > 0) P.push({ t: 'Fahrtkosten', q: km, u: 'km', e: satz, b: km * satz });
-  const sum = P.reduce((a, p) => a + Math.round(p.b * 100) / 100, 0);
-  return { P, sum };
+function zeitraumAus(rows) {
+  const jahr = new Date().getFullYear(), ds = [];
+  (rows || []).forEach(r => {
+    const m = String(r.d || '').match(/(\d{1,2})\.\s*(\d{1,2})\.?\s*(\d{2,4})?/); if (!m) return;
+    const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : jahr, d = new Date(y, +m[2] - 1, +m[1]);
+    if (!isNaN(d)) ds.push(d);
+  });
+  if (!ds.length) return '';
+  const a = new Date(Math.min.apply(null, ds)), b = new Date(Math.max.apply(null, ds));
+  return dts(a) === dts(b) ? dts(a) : dts(a) + ' – ' + dts(b);
+}
+function naechsteNr(nr) {
+  const m = String(nr).match(/^(.*?)(\d+)$/);
+  return m ? m[1] + String(+m[2] + 1).padStart(m[2].length, '0') : nr + '-2';
 }
 
-function faellig() {
-  const m = $('rDatum').value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (!m) return '';
-  const d = new Date(+m[3], +m[2] - 1, +m[1]);
-  d.setDate(d.getDate() + (parseInt($('mTage').value, 10) || 0));
-  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+function sammle() {
+  const st = rd('stundenzettel');
+  if (!st || !st.rows || !st.rows.some(r => r.v && r.b)) return null;
+  const md = rd('meineDaten') || {}, head = st.head || {};
+  const kunde = (rd('adressbuch') || []).find(k => k.id === head.kunde);
+  const s = berechne(st), km = num(head.km), satz = num(md.mKmSatz);
+  const P = [{ t: 'Pflegefachliche Tätigkeit als Pflegefachkraft (Honorar)', q: s.T, u: 'Std.', e: s.lohn, b: s.T * s.lohn }];
+  if (s.N > 0 && s.zN > 0) P.push({ t: 'Nachtzuschlag (20–06 Uhr) ' + Math.round(s.zN * 10000) / 100 + ' %', q: s.N, u: 'Std.', e: s.lohn * s.zN, b: s.N * s.lohn * s.zN });
+  if (s.W > 0 && s.zW > 0) P.push({ t: 'Wochenendzuschlag ' + Math.round(s.zW * 10000) / 100 + ' %', q: s.W, u: 'Std.', e: s.lohn * s.zW, b: s.W * s.lohn * s.zW });
+  if (s.F > 0 && s.zF > 0) P.push({ t: 'Feiertagszuschlag ' + Math.round(s.zF * 10000) / 100 + ' %', q: s.F, u: 'Std.', e: s.lohn * s.zF, b: s.F * s.lohn * s.zF });
+  if (km > 0 && satz > 0) P.push({ t: 'Fahrtkosten', q: km, u: 'km', e: satz, b: km * satz });
+  const sum = P.reduce((a, p) => a + Math.round(p.b * 100) / 100, 0);
+  const tage = parseInt(md.mTage, 10) || 0, f = new Date(); f.setDate(f.getDate() + tage);
+  return { st, s, km, satz, P, sum, tage, nr: md.mRechnungsnr || (new Date().getFullYear() + '-001'), datum: dts(new Date()), faellig: dts(f),
+    zeit: zeitraumAus(st.rows) || head.zeitraum || '', empf: String(head.auftraggeber || '').trim(), mail: kunde ? (kunde.mail || '') : '', bereich: head.bereich || '', kundeId: head.kunde || '',
+    name: md.mName || '', mailName: md.mMailName || '', adresse: md.mAdresse || '', tel: md.mTel || '', absMail: md.mMail || '', steuer: md.mSteuer || '',
+    kontoinhaber: md.mKontoinhaber || '', bank: md.mBank || '', iban: md.mIban || '', bic: md.mBic || '', farbe: md.mFarbe || '#1F5A3A', logo: md.logo || '' };
+}
+
+function pruefe() {
+  const f = [];
+  const L = (t, h, l) => f.push('<li>' + t + ' <a href="' + h + '">' + l + '</a></li>');
+  if (!D.empf) L('Es ist kein Auftraggeber ausgewählt.', 'stundenzettel.html', 'Im Stundenzettel wählen');
+  if (!D.zeit) L('Der Leistungszeitraum fehlt.', 'stundenzettel.html', 'Im Stundenzettel ergänzen');
+  if (!(D.s.lohn > 0)) L('Der Stundenlohn fehlt.', 'stundenzettel.html', 'Im Stundenzettel eintragen');
+  if (D.km > 0 && !(D.satz > 0)) L('Für die Kilometer fehlt der Kilometersatz.', 'meine-daten.html', 'In Meine Daten eintragen');
+  if (!D.name) L('Dein Name fehlt.', 'meine-daten.html', 'In Meine Daten eintragen');
+  if (!D.iban) L('Die IBAN fehlt.', 'meine-daten.html', 'In Meine Daten eintragen');
+  if ((rd('rechnungen') || []).some(r => r.nr === D.nr)) L('Die Rechnungsnummer ' + esc(D.nr) + ' wurde schon verwendet.', 'meine-daten.html', 'In Meine Daten ändern');
+  return f;
+}
+
+function kv(rows) { return rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd' + (r[1] ? '' : ' class="leer"') + '>' + (r[1] ? esc(r[1]) : (r[2] || '– fehlt –')) + '</dd>').join(''); }
+function zeige() {
+  $('ba').innerHTML = kv([['Rechnungsnummer', D.nr], ['Rechnungsdatum', D.datum], ['Empfänger', D.empf], ['E-Mail Empfänger', D.mail, '– nicht hinterlegt (nur für den Mailversand)'], ['Leistungszeitraum', D.zeit], ['Bereich / Station', D.bereich || '–']]);
+  $('bb').innerHTML = D.P.map(p => '<div class="pos"><div>' + esc(p.t) + '</div><div class="pm"><span>' + fmt(p.q) + ' ' + p.u + ' × ' + fmt(p.e) + ' €</span><b>' + fmt(Math.round(p.b * 100) / 100) + ' €</b></div></div>').join('') +
+    '<div class="tot"><span>Rechnungsbetrag</span><span>' + fmt(D.sum) + ' €</span></div>' +
+    '<dl class="kv">' + kv([['Zahlungsziel', D.tage + ' Tage, fällig am ' + D.faellig], ['Umsatzsteuer', 'befreit nach § 4 Nr. 14 UStG']]) + '</dl>';
+  $('bc').innerHTML = kv([['Name', D.name], ['Anschrift', D.adresse], ['Telefon', D.tel, '–'], ['E-Mail', D.absMail, '–'], ['Steuernummer', D.steuer, '–'], ['Kontoinhaber', D.kontoinhaber, '–'], ['Bank', D.bank, '–'], ['IBAN', D.iban], ['BIC', D.bic, '–']]);
+  fehler = pruefe();
+  $('fehler').hidden = !fehler.length; $('fehlerListe').innerHTML = fehler.join('');
+  buttons();
+}
+function bereit() { return !fehler.length && ok.a && ok.b && ok.c; }
+function buttons() {
+  document.querySelectorAll('.conf').forEach(b => {
+    b.disabled = !!fehler.length || done;
+    b.className = 'conf' + (ok[b.dataset.b] ? ' ok' : '');
+    b.textContent = ok[b.dataset.b] ? '✓ Bestätigt' : 'Bestätigen';
+  });
+  const r = bereit();
+  $('aSave').disabled = !r || done; $('aSave').textContent = done ? 'Gespeichert ✓' : 'In Rechnungen speichern';
+  $('aOpen').disabled = !r || !pdfUrl; $('aShare').disabled = !r || !pdfBlob;
+  $('aMail').setAttribute('aria-disabled', r ? 'false' : 'true');
 }
 
 /* ---------- PDF ---------- */
@@ -169,7 +202,7 @@ const EINLEITUNG = 'Für die von mir erbrachten pflegefachlichen Leistungen und 
 let pdfUrl = '', pdfTimer = 0, pdfBlob = null; const logoCache = {};
 const hexRgb = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); const v = m ? m[1] : '1F5A3A'; return [0, 2, 4].map(i => parseInt(v.slice(i, i + 2), 16)); };
 
-async function logoBild(tint) {
+async function logoBild(tint, logo) {
   const src = logo || 'logo-mark.png';
   const key = src.length + ':' + src.slice(-40) + tint.join(',');
   if (logoCache[key]) return logoCache[key];
@@ -183,15 +216,15 @@ async function logoBild(tint) {
   return logoCache[key] = { bytes: new Uint8Array(await blob.arrayBuffer()), w, h };
 }
 
-async function baueRechnungPdf() {
+async function baueRechnungPdf(D) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
-  const { P, sum } = positionen();
-  const nr = $('rNr').value.trim(), name = $('mName').value.trim(), fae = faellig();
+  const { P, sum } = D;
+  const nr = D.nr, name = D.name, fae = D.faellig;
   const doc = await PDFDocument.create();
   doc.setTitle('Rechnung ' + nr); if (name) doc.setAuthor(name);
   const pg = doc.addPage([595.28, PH]);
   const F = await doc.embedFont(StandardFonts.Helvetica), B = await doc.embedFont(StandardFonts.HelveticaBold);
-  const c0 = hexRgb($('mFarbe').value), GR = rgb(c0[0] / 255, c0[1] / 255, c0[2] / 255);
+  const c0 = hexRgb(D.farbe), GR = rgb(c0[0] / 255, c0[1] / 255, c0[2] / 255);
   const t255 = c0.map(v => Math.round(255 - (255 - v) * 0.14)), TINT = rgb(t255[0] / 255, t255[1] / 255, t255[2] / 255);
   const INK = rgb(.07, .07, .07), GRAY = rgb(.42, .47, .5), HAIR = rgb(.85, .87, .83);
   const safe = (s, f) => { let o = ''; for (const ch of String(s == null ? '' : s)) { try { f.encodeText(ch); o += ch; } catch (e) { const b = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); try { f.encodeText(b); o += b; } catch (e2) { o += '?'; } } } return o; };
@@ -210,17 +243,17 @@ async function baueRechnungPdf() {
   // Kopfband
   R(0, 0, 210, 26, TINT); R(0, 24.8, 210, 1.2, GR);
   try {
-    const lg = await logoBild(t255), im = await doc.embedPng(lg.bytes);
+    const lg = await logoBild(t255, D.logo), im = await doc.embedPng(lg.bytes);
     let hh = 18, ww = hh * lg.w / lg.h; if (ww > 70) { ww = 70; hh = ww * lg.h / lg.w; }
     pg.drawImage(im, { x: MM(15), y: PH - MM(3.5 + hh), width: MM(ww), height: MM(hh) });
   } catch (e) { if (name) T(name, 15, 15, { f: B, z: 14, c: GR }); }
   T('Honorarrechnung', 195, 16, { f: B, z: 22, c: GR, a: 'r' });
 
   // Daten: Empfänger links, Rechnungsdaten rechts
-  const empf = $('rEmpf').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const empf = D.empf.split('\n').map(s => s.trim()).filter(Boolean);
   T('Rechnungsempfänger', 15, 40, { z: 7.5, c: GRAY });
   let yl = 46; empf.forEach((l, i) => { T(l, 15, yl, { f: i ? F : B, z: 11 }); yl += 5; });
-  const rows = [['Rechnungsnr.', nr, 1], ['Rechnungsdatum', $('rDatum').value], ['Leistungszeitraum', $('rZeit').value], ['Bereich / Station', $('rBereich').value], ['Steuernummer', $('mSteuer').value]].filter(r => r[1]);
+  const rows = [['Rechnungsnr.', nr, 1], ['Rechnungsdatum', D.datum], ['Leistungszeitraum', D.zeit], ['Bereich / Station', D.bereich], ['Steuernummer', D.steuer]].filter(r => r[1]);
   let yr = 40; rows.forEach(r => { T(r[0], 120, yr, { z: 9, c: GRAY }); T(r[1], 195, yr, { f: r[2] ? B : F, z: 10, a: 'r' }); L(120, yr + 1.6, 195, .4); yr += 5.6; });
   const y0 = Math.max(yl - 3, yr - 4);
 
@@ -257,200 +290,72 @@ async function baueRechnungPdf() {
   // Fußband
   R(0, 265, 210, 32, TINT); R(0, 265, 210, 1.2, GR);
   const col = (x, kopf, zeilen) => { T(kopf.toUpperCase(), x, 272.5, { f: B, z: 6.5, c: GRAY }); let yy = 277.5; zeilen.forEach(z => { T(z.t, x, yy, { f: z.b ? B : F, z: 8.5, c: z.g ? GRAY : INK }); yy += 4.3; }); };
-  const adr = $('mAdresse').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const adr = D.adresse.split('\n').map(s => s.trim()).filter(Boolean);
   col(15, 'Anschrift', [{ t: name, b: 1 }].concat(adr.map(t => ({ t, g: 1 }))));
-  col(72, 'Kontakt', [$('mTel').value && 'Tel.: ' + $('mTel').value, $('mMail').value].filter(Boolean).map(t => ({ t, g: 1 })));
-  col(124, 'Bankverbindung', [$('mKontoinhaber').value, $('mBank').value, $('mIban').value && 'IBAN: ' + $('mIban').value, $('mBic').value && 'BIC: ' + $('mBic').value].filter(Boolean).map(t => ({ t })));
+  col(72, 'Kontakt', [D.tel && 'Tel.: ' + D.tel, D.absMail].filter(Boolean).map(t => ({ t, g: 1 })));
+  col(124, 'Bankverbindung', [D.kontoinhaber, D.bank, D.iban && 'IBAN: ' + D.iban, D.bic && 'BIC: ' + D.bic].filter(Boolean).map(t => ({ t })));
   return new Blob([await doc.save()], { type: 'application/pdf' });
 }
 
-function schedulePdf() { clearTimeout(pdfTimer); pdfTimer = setTimeout(zeigePdf, 350); }
+
+
 async function zeigePdf() {
   const st = $('pdfStatus');
   if (typeof PDFLib === 'undefined') { st.textContent = 'Für die Vorschau fehlt die Datei pdf-lib.min.js im GitHub-Ordner.'; return; }
   try {
-    pdfBlob = await baueRechnungPdf();
+    pdfBlob = await baueRechnungPdf(D);
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     pdfUrl = URL.createObjectURL(pdfBlob);
-    $('pdf').src = pdfUrl + '#toolbar=0&navpanes=0&view=FitH';
-    st.textContent = '';
+    $('pdf').src = pdfUrl + '#toolbar=0&navpanes=0&view=FitH'; st.textContent = '';
   } catch (e) { st.textContent = 'Die Vorschau konnte nicht erstellt werden.'; }
+  buttons();
 }
-const pdfName = () => 'Rechnung-' + ($('rNr').value.trim() || 'neu').replace(/[^\w.-]+/g, '_') + '.pdf';
-$('pdfOpen').onclick = () => { if (pdfUrl) window.open(pdfUrl, '_blank'); };
-$('pdfSave').onclick = async () => {
-  if (!pdfBlob) return;
+
+function mailHref() {
+  const dd = D.zeit.match(/\d{1,2}\.\d{1,2}\.\d{4}/g) || [];
+  const zt = dd.length >= 2 ? 'für den Zeitraum vom ' + dd[0] + ' bis zum ' + dd[dd.length - 1] : dd.length === 1 ? 'für den Einsatz am ' + dd[0] : D.zeit ? 'für den Zeitraum ' + D.zeit : '';
+  const body = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie meine Rechnung Nr. ' + D.nr + (zt ? ' ' + zt : '') + '.\n\nIch bitte Sie, den Rechnungsbetrag in Höhe von ' + fmt(D.sum) + ' € bis zum ' + D.faellig + ' auf das in der Rechnung angegebene Konto zu überweisen.\n\nBei Rückfragen stehe ich Ihnen gerne zur Verfügung.\n\nIch bedanke mich für Ihr Vertrauen und würde mich freuen, auch künftig für Sie tätig sein zu dürfen.\n\nMit freundlichen Grüßen\n\n' + (D.mailName || D.name);
+  return 'mailto:' + encodeURIComponent(D.mail).replace('%40', '@') + '?subject=' + encodeURIComponent('Rechnung Nr. ' + D.nr) + '&body=' + encodeURIComponent(body);
+}
+
+/* Abschluss: speichern, nächste Nummer, Stundenzettel leeren */
+function abschliessen() {
+  if (done || !bereit()) return done;
+  try {
+    const list = rd('rechnungen') || [];
+    list.push({ nr: D.nr, datum: D.datum, faellig: D.faellig, zeitraum: D.zeit, empfaenger: D.empf, mail: D.mail, bereich: D.bereich, km: D.km,
+      positionen: D.P, summe: Math.round(D.sum * 100) / 100, status: 'offen', kundeId: D.kundeId,
+      absender: { name: D.name, adresse: D.adresse, tel: D.tel, mail: D.absMail, steuer: D.steuer, kontoinhaber: D.kontoinhaber, bank: D.bank, iban: D.iban, bic: D.bic, farbe: D.farbe } });
+    localStorage.setItem('rechnungen', JSON.stringify(list));
+    const md = rd('meineDaten') || {}; md.mRechnungsnr = naechsteNr(D.nr);
+    localStorage.setItem('meineDaten', JSON.stringify(md));
+    localStorage.removeItem('stundenzettel');
+    done = true;
+    $('fertig').textContent = 'Rechnung ' + D.nr + ' ist in Rechnungen gespeichert. Die nächste Rechnungsnummer ist ' + md.mRechnungsnr + '. Der Stundenzettel wurde geleert.';
+    $('nach').hidden = false; $('hinweis').hidden = true;
+  } catch (e) { $('fertig').textContent = 'Speichern auf diesem Gerät war nicht möglich.'; }
+  buttons(); return done;
+}
+const pdfName = () => 'Rechnung-' + (D.nr || 'neu').replace(/[^\w.-]+/g, '_') + '.pdf';
+document.querySelectorAll('.conf').forEach(b => b.addEventListener('click', () => { ok[b.dataset.b] = !ok[b.dataset.b]; buttons(); }));
+$('aSave').onclick = abschliessen;
+$('aOpen').onclick = () => { if (!bereit() || !pdfUrl) return; abschliessen(); window.open(pdfUrl, '_blank'); };
+$('aShare').onclick = async () => {
+  if (!bereit() || !pdfBlob) return;
   const file = new File([pdfBlob], pdfName(), { type: 'application/pdf' });
   try {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: pdfName() }); return; }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: pdfName() }); abschliessen(); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = pdfUrl; a.download = pdfName(); document.body.appendChild(a); a.click(); a.remove();
+  abschliessen();
 };
+$('aMail').addEventListener('click', e => { if (!bereit()) { e.preventDefault(); return; } abschliessen(); });
 
-/* ---------- Vorschau ---------- */
-function render() {
-  const { P, sum } = positionen();
-  const bereich = $('rBereich').value.trim();
-  const zeit = $('rZeit').value.trim();
-  const fae = faellig();
-  const dd = zeit.match(/\d{1,2}\.\d{1,2}\.\d{4}/g) || [];
-  const zt = dd.length >= 2 ? 'für den Zeitraum vom ' + dd[0] + ' bis zum ' + dd[dd.length - 1] : dd.length === 1 ? 'für den Einsatz am ' + dd[0] : zeit ? 'für den Zeitraum ' + zeit : '';
-  const body = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie meine Rechnung Nr. ' + $('rNr').value + (zt ? ' ' + zt : '') + '.\n\nIch bitte Sie, den Rechnungsbetrag in Höhe von ' + fmt(sum) + ' € bis zum ' + (fae || '[Datum]') + ' auf das in der Rechnung angegebene Konto zu überweisen.\n\nBei Rückfragen stehe ich Ihnen gerne zur Verfügung.\n\nIch bedanke mich für Ihr Vertrauen und würde mich freuen, auch künftig für Sie tätig sein zu dürfen.\n\nMit freundlichen Grüßen\n\n' + ($('mMailName').value || $('mName').value);
-  $('mail').href = 'mailto:' + encodeURIComponent($('rMail').value).replace('%40', '@') +
-    '?subject=' + encodeURIComponent('Rechnung Nr. ' + $('rNr').value) + '&body=' + encodeURIComponent(body);
-  $('mdHint').hidden = !!($('mName').value && $('mIban').value);
-  schedulePdf();
-}
-
-/* ---------- Speichern / Laden ---------- */
-function saveMeine() {
-  try {
-    let o = {}; try { o = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
-    o.logo = logo; MEINE.forEach(k => o[k] = $(k).value);
-    localStorage.setItem('meineDaten', JSON.stringify(o));
-  } catch (e) {}
-}
-function loadMeine() {
-  try {
-    const o = JSON.parse(localStorage.getItem('meineDaten') || 'null');
-    if (!o) return;
-    MEINE.forEach(k => { if (o[k] !== undefined && o[k] !== '') $(k).value = o[k]; });
-    logo = o.logo || '';
-  } catch (e) {}
-}
-function rechnungen() {
-  try { return JSON.parse(localStorage.getItem('rechnungen') || '[]'); } catch (e) { return []; }
-}
-function nextNr() {
-  const y = new Date().getFullYear();
-  const n = rechnungen().filter(r => String(r.nr).startsWith(y + '-')).length + 1;
-  return y + '-' + String(n).padStart(3, '0');
-}
-
-function zeitraumAus(rows) {
-  const jahr = new Date().getFullYear(), ds = [];
-  rows.forEach(r => {
-    const m = String(r.d || '').match(/(\d{1,2})\.\s*(\d{1,2})\.?\s*(\d{2,4})?/);
-    if (!m) return;
-    const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : jahr;
-    const d = new Date(y, +m[2] - 1, +m[1]);
-    if (!isNaN(d)) ds.push(d);
-  });
-  if (!ds.length) return '';
-  const f = d => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const a = new Date(Math.min.apply(null, ds)), b = new Date(Math.max.apply(null, ds));
-  return f(a) === f(b) ? f(a) : f(a) + ' – ' + f(b);
-}
-
-function ladeStunden() {
-  let st = null;
-  try { st = JSON.parse(localStorage.getItem('stundenzettel') || 'null'); } catch (e) {}
-  const msg = $('msg');
-  if (!st || !st.rows || !st.rows.some(r => r.v && r.b)) {
-    stunden = null;
-    msg.textContent = 'Kein Stundenzettel gefunden. Bitte zuerst den Stundenzettel ausfüllen oder einlesen (gleiches Gerät, gleicher Browser).';
-    render(); return;
-  }
-  stunden = st;
-  const s = berechne(st), h = st.head || {};
-  if (h.auftraggeber) $('rEmpf').value = h.auftraggeber;
-  const ersteZeile = String(h.auftraggeber || '').split('\n')[0].trim().toLowerCase();
-  const treffer = ersteZeile && adressen().find(k => k.name.trim().toLowerCase() === ersteZeile);
-  if (treffer) waehleAdresse(treffer.id);
-  $('rZeit').value = zeitraumAus(st.rows) || h.zeitraum || '';
-  if (h.bereich) $('rBereich').value = h.bereich;
-  const warn = s.lohn > 0 ? '' : ' Achtung: Im Stundenzettel fehlt der Stundenlohn.';
-  msg.textContent = fmt(s.T) + ' Std. insgesamt (davon Nacht ' + fmt(s.N) + ', Wochenende ' + fmt(s.W) + ', Feiertag ' + fmt(s.F) + '), Stundenlohn ' + fmt(s.lohn) + ' €.' + warn;
-  render();
-}
-
-/* ---------- Logo ---------- */
-async function logoLaden(file) {
-  const bmp = await createImageBitmap(file);
-  const k = Math.min(1, 500 / bmp.width);
-  const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  try {
-    const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, bins = {};
-    for (let i = 0; i < px.length; i += 4) {
-      const r = px[i], g = px[i + 1], b = px[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-      if (px[i + 3] < 128 || mn > 225 || mx - mn < 40 || mx < 40) continue;
-      const k = (r >> 5) + ',' + (g >> 5) + ',' + (b >> 5), e = bins[k] || (bins[k] = { n: 0, r: 0, g: 0, b: 0 });
-      e.n++; e.r += r; e.g += g; e.b += b;
-    }
-    const best = Object.values(bins).sort((x, y) => y.n - x.n)[0];
-    if (best) $('mFarbe').value = '#' + [best.r, best.g, best.b].map(v => Math.round(v / best.n).toString(16).padStart(2, '0')).join('');
-  } catch (e) {}
-  return c.toDataURL('image/png');
-}
-$('file').addEventListener('change', async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { logo = await logoLaden(f); saveMeine(); render(); $('msg2').textContent = ''; }
-  catch (err) { $('msg2').textContent = 'Das Logo konnte nicht geladen werden.'; }
-  e.target.value = '';
-});
-$('logoDel').onclick = () => { logo = ''; saveMeine(); render(); };
-
-/* ---------- Ereignisse ---------- */
-
-/* Datum automatisch mit Punkten */
-function fmtDatum(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
-function fmtZeitraum(v) {
-  const p = String(v).split(/\s*[–—-]\s*/);
-  if (p.length > 1) { return fmtDatum(p[0]) + ' – ' + fmtDatum(p.slice(1).join('')); }
-  const d = String(v).replace(/\D/g, '').slice(0, 16), a = fmtDatum(d.slice(0, 8)), b = fmtDatum(d.slice(8));
-  return b ? a + ' – ' + b : a;
-}
-function autoDatum(t, art) {
-  if (!/^[\d.\s–—\/-]*$/.test(t.value) || t.selectionStart !== t.value.length) return;
-  const n = art === 'zeit' ? fmtZeitraum(t.value) : fmtDatum(t.value);
-  if (n !== t.value) t.value = n;
-}
-
-document.addEventListener('input', e => {
-  if (e.target.id === 'rDatum') autoDatum(e.target); else if (e.target.id === 'rZeit') autoDatum(e.target, 'zeit');
-  if (MEINE.indexOf(e.target.id) >= 0) saveMeine();
-  render();
-});
-$('reload').onclick = ladeStunden;
-$('save').onclick = () => {
-  const { P, sum } = positionen();
-  const list = rechnungen();
-  const nr = $('rNr').value.trim();
-  if (!nr) { $('msg2').textContent = 'Bitte eine Rechnungsnummer eintragen.'; return; }
-  if (list.some(r => r.nr === nr) && !confirm('Rechnung ' + nr + ' ist schon gespeichert. Überschreiben?')) return;
-  const rec = { nr, datum: $('rDatum').value, faellig: faellig(), zeitraum: $('rZeit').value, empfaenger: $('rEmpf').value,
-    mail: $('rMail').value, bereich: $('rBereich').value, km: num($('rKm').value), positionen: P, summe: Math.round(sum * 100) / 100, status: 'offen' };
-  const i = list.findIndex(r => r.nr === nr);
-  if (i >= 0) { rec.status = list[i].status; list[i] = rec; } else list.push(rec);
-  try { localStorage.setItem('rechnungen', JSON.stringify(list)); $('msg2').textContent = 'Rechnung ' + nr + ' gespeichert (' + fmt(rec.summe) + ' €, offen).'; }
-  catch (e) { $('msg2').textContent = 'Speichern auf diesem Gerät war nicht möglich.'; }
-};
-
-
-/* ---------- Adressbuch ---------- */
-function adressen() { try { return JSON.parse(localStorage.getItem('adressbuch') || '[]'); } catch (e) { return []; } }
-function fuelleAdressen() {
-  const sel = $('rAdr'), l = adressen().sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  sel.innerHTML = '<option value="">– keine Auswahl –</option>' + l.map(k => '<option value="' + esc(k.id) + '">' + esc(k.name) + '</option>').join('');
-}
-function waehleAdresse(id) {
-  const k = adressen().find(x => x.id === id); if (!k) return;
-  $('rEmpf').value = k.name + (k.adresse ? '\n' + k.adresse : '');
-  $('rMail').value = k.mail || '';
-  $('rAdr').value = id;
-}
-$('rAdr').addEventListener('change', e => { if (e.target.value) waehleAdresse(e.target.value); render(); });
-
-/* ---------- Start ---------- */
-loadMeine();
-fuelleAdressen();
-$('rDatum').value = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-$('rNr').value = nextNr();
-if (!$('mName').value) $('meine').open = true;
-ladeStunden();
-window.addEventListener('pageshow', e => { if (e.persisted) { loadMeine(); ladeStunden(); } });
+/* Start */
+D = sammle();
+if (!D) { $('leer').hidden = false; }
+else { $('inhalt').hidden = false; zeige(); $('aMail').href = mailHref(); zeigePdf(); }
+window.addEventListener('pageshow', e => { if (e.persisted && !done) location.reload(); });
 </script>
 </body>
 </html>
