@@ -35,32 +35,24 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset
 .note{font-size:.85rem;color:var(--mut)}
 #imp{position:absolute;opacity:0;width:1px;height:1px}
 </style>
+<link rel="stylesheet" href="style.css">
+<script src="nav.js" defer></script>
 </head>
 <body>
 <main>
 <h1>Rechnungen</h1>
-<p class="sub"><a href="index.html">Zur Startseite</a> · <a href="rechnung.html">Neue Rechnung</a></p>
 
 <section>
   <div class="tabs">
-    <button id="tOffen">Offen</button>
+    <button id="tAlle" class="sec">Alle</button>
+    <button id="tOffen" class="sec">Offen</button>
     <button id="tErl" class="sec">Erledigt</button>
   </div>
   <p id="total" class="total"></p>
   <div id="list"></div>
 </section>
+<a class="btn big" href="rechnung.html">+ Neue Rechnung</a>
 
-<section>
-  <h2>Sicherung</h2>
-  <p class="note">Alle Daten liegen nur auf diesem Gerät. So teilt ihr sie über iCloud: Abwechselnd arbeiten. Am Ende „Sicherung speichern“ und die Datei in den gemeinsamen iCloud-Ordner legen. Die andere Person spielt sie vor dem Arbeiten ein.</p>
-  <div class="actions">
-    <button id="exp">Sicherung speichern</button>
-    <label class="btn sec" for="imp">Sicherung einspielen</label>
-    <input id="imp" type="file" accept=".json,application/json">
-  </div>
-  <p id="stand"></p>
-  <p id="msg" class="note"></p>
-</section>
 </main>
 
 <script>
@@ -70,7 +62,8 @@ const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFra
 const heute = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const datum = d => d.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
 const parseD = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
-let tab = 'offen';
+let tab = (new URLSearchParams(location.search).get('f')) || 'alle';
+if (['alle', 'offen', 'erledigt'].indexOf(tab) < 0) tab = 'alle';
 
 function lade() { try { return JSON.parse(localStorage.getItem('rechnungen') || '[]'); } catch (e) { return []; } }
 function sichern(l) { try { localStorage.setItem('rechnungen', JSON.stringify(l)); } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; } }
@@ -88,20 +81,23 @@ function erinnerung(r) {
 function zeige() {
   const l = lade();
   const offen = l.filter(r => r.status !== 'erledigt'), erl = l.filter(r => r.status === 'erledigt');
+  $('tAlle').className = tab === 'alle' ? '' : 'sec';
+  $('tAlle').textContent = 'Alle (' + l.length + ')';
   $('tOffen').className = tab === 'offen' ? '' : 'sec';
   $('tErl').className = tab === 'erledigt' ? '' : 'sec';
   $('tOffen').textContent = 'Offen (' + offen.length + ')';
   $('tErl').textContent = 'Erledigt (' + erl.length + ')';
-  const liste = (tab === 'offen' ? offen : erl).slice().sort((a, b) => (parseD(b.datum) || 0) - (parseD(a.datum) || 0));
+  const liste = (tab === 'offen' ? offen : tab === 'alle' ? l : erl).slice().sort((a, b) => (parseD(b.datum) || 0) - (parseD(a.datum) || 0));
   const s = liste.reduce((a, r) => a + (r.summe || 0), 0);
-  $('total').innerHTML = (tab === 'offen' ? 'Noch offen: ' : 'Bezahlt: ') + '<strong>' + fmt(s) + ' €</strong>';
+  $('total').innerHTML = (tab === 'offen' ? 'Noch offen: ' : tab === 'alle' ? 'Alle Rechnungen: ' : 'Bezahlt: ') + '<strong>' + fmt(s) + ' €</strong>';
   if (!liste.length) { $('list').innerHTML = '<p class="mut">' + (tab === 'offen' ? 'Keine offenen Rechnungen.' : 'Noch keine erledigten Rechnungen.') + '</p>'; return; }
   $('list').innerHTML = liste.map(r => {
     const i = l.indexOf(r), ue = ueberfaellig(r), name = String(r.empfaenger || '').split('\n')[0];
     return `<div class="card">
       <div class="row"><span class="nr">${esc(r.nr)}</span><span class="sum">${fmt(r.summe || 0)} €</span></div>
       <div class="mut">${esc(name)}${r.zeitraum ? ' · ' + esc(r.zeitraum) : ''}</div>
-      <div class="mut">Rechnung vom ${esc(r.datum)} · ${r.status === 'erledigt' ? '<span class="ok">bezahlt' + (r.bezahltAm ? ' am ' + esc(r.bezahltAm) : '') + '</span>' : (ue ? '<span class="bad">überfällig seit ' + esc(r.faellig) + '</span>' : 'fällig am ' + esc(r.faellig || '–'))}</div>
+      <div class="mut">Rechnung vom ${esc(r.datum)}${r.status === 'erledigt' ? ' · bezahlt' + (r.bezahltAm ? ' am ' + esc(r.bezahltAm) : '') : ' · fällig am ' + esc(r.faellig || '–')}</div>
+      <div><span class="chip ${r.status === 'erledigt' ? 'ok' : (ue ? 'bad' : 'offen')}">${r.status === 'erledigt' ? 'Erledigt' : (ue ? 'Überfällig' : 'Offen')}</span></div>
       <div class="actions">
         ${r.status === 'erledigt'
           ? `<button class="sec" data-a="open" data-i="${i}">Wieder öffnen</button>`
@@ -119,57 +115,11 @@ $('list').addEventListener('click', e => {
   else if (b.dataset.a === 'del') { if (!confirm('Rechnung ' + r.nr + ' wirklich löschen?')) return; l.splice(i, 1); }
   sichern(l); zeige();
 });
+$('tAlle').onclick = () => { tab = 'alle'; zeige(); };
 $('tOffen').onclick = () => { tab = 'offen'; zeige(); };
 $('tErl').onclick = () => { tab = 'erledigt'; zeige(); };
 
-/* Sicherung */
-const KEYS = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
-function zustand() { return KEYS.map(k => localStorage.getItem(k) || '').join('|'); }
-function hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); }
-function info() { try { return JSON.parse(localStorage.getItem('sicherungInfo') || 'null'); } catch (e) { return null; } }
-function setInfo(zeit) { try { localStorage.setItem('sicherungInfo', JSON.stringify({ hash: hash(zustand()), zeit })); } catch (e) {} }
-function ungesichert() { const i = info(), z = zustand(); return z.replace(/\|/g, '') !== '' && (!i || i.hash !== hash(z)); }
-const zeitText = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
-function stand() {
-  const i = info();
-  $('stand').innerHTML = (i ? 'Letzter Stand: ' + zeitText(i.zeit) + '. ' : 'Noch keine Sicherung gespeichert. ') +
-    (ungesichert() ? '<strong class="bad">Es gibt Änderungen, die noch nicht gesichert sind.</strong>' : (i ? '<span class="ok">Alles gesichert.</span>' : ''));
-}
-$('exp').onclick = async () => {
-  const jetzt = new Date().toISOString();
-  const o = { _app: 'pflege-abrechnung', _stand: jetzt };
-  KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) o[k] = JSON.parse(v); });
-  const name = 'sicherung-' + jetzt.slice(0, 10) + '.json';
-  const file = new File([JSON.stringify(o)], name, { type: 'application/json' });
-  try {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Sicherung Abrechnung' });
-      $('msg').textContent = 'Wähle im Menü „In Dateien sichern“ und dann den iCloud-Ordner.';
-    } else {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(file); a.download = name;
-      document.body.appendChild(a); a.click(); a.remove();
-      $('msg').textContent = 'Sicherung gespeichert (Ordner Downloads bzw. Dateien). Lege sie in den gemeinsamen iCloud-Ordner.';
-    }
-    setInfo(jetzt); stand();
-  } catch (err) { if (err && err.name !== 'AbortError') $('msg').textContent = 'Die Sicherung konnte nicht gespeichert werden.'; }
-};
-$('imp').addEventListener('change', async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try {
-    const o = JSON.parse(await f.text());
-    if (o._app !== 'pflege-abrechnung') throw 0;
-    const i = info();
-    if (ungesichert() && !confirm('Achtung: Auf diesem Gerät gibt es Änderungen, die noch nicht gesichert sind. Sie gehen verloren, wenn du die Datei einspielst. Trotzdem einspielen?')) return;
-    if (i && o._stand && o._stand < i.zeit && !confirm('Diese Datei (' + zeitText(o._stand) + ') ist älter als dein letzter Stand (' + zeitText(i.zeit) + '). Trotzdem einspielen?')) return;
-    if (!confirm('Die Daten auf diesem Gerät werden durch die Sicherung ersetzt. Fortfahren?')) return;
-    KEYS.forEach(k => { if (o[k] !== undefined) localStorage.setItem(k, JSON.stringify(o[k])); });
-    setInfo(o._stand || new Date().toISOString());
-    $('msg').textContent = 'Sicherung eingespielt.'; zeige(); stand();
-  } catch (err) { $('msg').textContent = 'Das ist keine gültige Sicherungsdatei.'; }
-  e.target.value = '';
-});
-stand();
+
 zeige();
 </script>
 </body>

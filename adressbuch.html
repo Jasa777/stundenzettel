@@ -6,7 +6,7 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#1F6B3A">
-<title>Adressbuch</title>
+<title>Kunden</title>
 <style>
 :root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--bad:#B42318;color-scheme:light}
 @media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--bad:#FF8A80;color-scheme:dark}}
@@ -29,11 +29,19 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 #msg{color:var(--mut);font-size:.9rem;min-height:1.3em}
 </style>
+<link rel="stylesheet" href="style.css">
+<script src="nav.js" defer></script>
 </head>
 <body>
 <main>
-<h1>Adressbuch</h1>
-<p class="sub"><a href="index.html">Zur Startseite</a> · <a href="rechnung.html">Neue Rechnung</a></p>
+<h1>Kunden</h1>
+
+<section>
+  <h2>Gespeicherte Kunden</h2>
+  <label>Suchen<input id="q" type="search" placeholder="Name oder Ort"></label>
+  <div id="list"></div>
+</section>
+<a class="btn big" href="#ft" style="margin:0 0 14px">+ Neuer Kunde</a>
 
 <section>
   <h2 id="ft">Neuer Kunde</h2>
@@ -46,12 +54,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     <button class="sec" id="cancel" hidden>Abbrechen</button>
   </div>
   <p id="msg"></p>
-</section>
-
-<section>
-  <h2>Gespeicherte Kunden</h2>
-  <label>Suchen<input id="q" type="search" placeholder="Name oder Ort"></label>
-  <div id="list"></div>
 </section>
 </main>
 
@@ -69,7 +71,7 @@ function zeige() {
   const l = lade().filter(k => !q || (k.name + ' ' + k.adresse).toLowerCase().indexOf(q) >= 0)
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
   $('list').innerHTML = l.length ? l.map(k => `<div class="card">
-    <div class="nm">${esc(k.name)}</div>
+    <div class="hl"><span class="av">${esc(k.name.charAt(0).toUpperCase())}</span><div class="nm">${esc(k.name)}</div></div>
     <div class="mut">${esc(k.adresse)}${k.mail ? '\n' + esc(k.mail) : ''}${k.tel ? '\nTel.: ' + esc(k.tel) : ''}</div>
     <div class="actions"><button class="sec" data-a="e" data-id="${esc(k.id)}">Bearbeiten</button><button class="del" data-a="d" data-id="${esc(k.id)}">Löschen</button></div>
   </div>`).join('') : '<p class="mut">' + (q ? 'Nichts gefunden.' : 'Noch kein Kunde gespeichert.') + '</p>';
@@ -91,7 +93,7 @@ $('list').addEventListener('click', e => {
   const l = lade(), k = l.find(x => x.id === b.dataset.id); if (!k) return;
   if (b.dataset.a === 'e') {
     edit = k.id; $('name').value = k.name; $('adr').value = k.adresse; $('mail').value = k.mail; $('tel').value = k.tel || '';
-    $('ft').textContent = 'Kunde bearbeiten'; $('cancel').hidden = false; $('msg').textContent = ''; window.scrollTo(0, 0); $('name').focus();
+    $('ft').textContent = 'Kunde bearbeiten'; $('cancel').hidden = false; $('msg').textContent = ''; $('ft').scrollIntoView(); $('name').focus();
   } else if (confirm('„' + k.name + '“ wirklich löschen? Bereits gespeicherte Rechnungen bleiben unverändert.')) {
     sichern(l.filter(x => x.id !== k.id)); if (edit === k.id) leeren(); zeige();
   }

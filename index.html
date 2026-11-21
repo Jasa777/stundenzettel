@@ -2,59 +2,50 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
-<meta name="theme-color" content="#1F6B3A">
-<title>Abrechnung</title>
+<meta name="theme-color" content="#1F5A3A">
+<title>Semira Faktura</title>
 <style>
-:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--bad:#B42318;color-scheme:light}
-@media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--bad:#FF8A80;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{margin:0;color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:640px;margin:0 auto;padding:16px}
-h1{font-size:1.8rem;margin:8px 0 4px}
-.sub{color:var(--mut);margin:0 0 18px}
-.grid{display:grid;gap:12px}
-a.tile{display:block;background:var(--surf);border:1px solid var(--line);border-left:6px solid var(--pri);border-radius:10px;padding:16px;color:inherit;text-decoration:none}
-a.tile:focus-visible{outline:3px solid #D9A400;outline-offset:2px}
-.t{font-size:1.15rem;font-weight:700;color:var(--pri)}
-.d{color:var(--mut);margin-top:2px}
 .bad{color:var(--bad);font-weight:700}
-.soon{opacity:.6;border-left-color:var(--line)}
 </style>
+<link rel="stylesheet" href="style.css">
+<script src="nav.js" defer></script>
 </head>
 <body>
 <main>
-<h1>Abrechnung</h1>
-<p class="sub">Stundenzettel erfassen, Rechnung schreiben, Zahlungen im Blick behalten.</p>
+<p class="hello">Herzlich willkommen,<br><strong id="nm">Semira Faktura</strong></p>
 <p id="sich" class="bad" hidden></p>
-<div class="grid">
-  <a class="tile" href="stundenzettel.html"><div class="t">1. Stundenzettel</div><div class="d">Zettel ausfüllen oder Foto einlesen</div></a>
-  <a class="tile" href="rechnung.html"><div class="t">2. Neue Rechnung</div><div class="d">Aus dem Stundenzettel, als PDF oder per Mail</div></a>
-  <a class="tile" href="rechnungen.html"><div class="t">3. Rechnungen</div><div class="d" id="stat">Offen, erledigt, Zahlungserinnerung, Sicherung</div></a>
-  <a class="tile" href="adressbuch.html"><div class="t">Adressbuch</div><div class="d">Kunden mit Anschrift und Mailadresse</div></a>
+<a class="card stat" href="rechnungen.html?f=alle"><b id="gesamt">0</b>Rechnungen gesamt</a>
+<div class="two">
+  <a class="card stat" href="rechnungen.html?f=erledigt"><b id="erl">0</b>Erledigt</a>
+  <a class="card stat" href="rechnungen.html?f=offen"><b id="off">0</b>Offen</a>
 </div>
+<p id="ueb" class="bad" hidden></p>
+<a class="btn big" href="rechnung.html">Neue Rechnung +</a>
+<a class="btn sec big" href="stundenzettel.html">Stundenzettel erfassen</a>
 </main>
 <script>
-try {
-  const l = JSON.parse(localStorage.getItem('rechnungen') || '[]').filter(r => r.status !== 'erledigt');
-  const p = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
-  const h = new Date(); h.setHours(0, 0, 0, 0);
-  const ue = l.filter(r => { const f = p(r.faellig); return f && f < h; }).length;
-  const s = l.reduce((a, r) => a + (r.summe || 0), 0);
-  if (l.length) document.getElementById('stat').innerHTML = l.length + ' offen (' + s.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €)' + (ue ? ' · <span class="bad">' + ue + ' überfällig</span>' : '');
-} catch (e) {}
-try {
-  const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
-  const z = K.map(k => localStorage.getItem(k) || '').join('|');
-  const hs = s => { let h = 5381; for (let j = 0; j < s.length; j++) h = ((h << 5) + h + s.charCodeAt(j)) | 0; return String(h); };
-  const inf = JSON.parse(localStorage.getItem('sicherungInfo') || 'null');
-  if (z.replace(/\|/g, '') !== '' && (!inf || inf.hash !== hs(z))) {
-    const e = document.getElementById('sich'); e.hidden = false;
-    e.innerHTML = 'Ungesicherte Änderungen. <a href="rechnungen.html">Jetzt sichern</a>';
-  }
-} catch (e) {}
+const $ = id => document.getElementById(id);
+const rd = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const md = rd('meineDaten'); if (md && md.mName) $('nm').textContent = md.mName + '!';
+const l = rd('rechnungen') || [];
+const offen = l.filter(r => r.status !== 'erledigt');
+$('gesamt').textContent = l.length; $('erl').textContent = l.length - offen.length; $('off').textContent = offen.length;
+const p = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
+const h = new Date(); h.setHours(0, 0, 0, 0);
+const ue = offen.filter(r => { const f = p(r.faellig); return f && f < h; });
+if (ue.length) { $('ueb').hidden = false; $('ueb').innerHTML = ue.length + ' überfällig (' + fmt(ue.reduce((a, r) => a + (r.summe || 0), 0)) + ' €) · <a href="rechnungen.html?f=offen">ansehen</a>'; }
+const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
+const z = K.map(k => localStorage.getItem(k) || '').join('|');
+const hs = s => { let x = 5381; for (let j = 0; j < s.length; j++) x = ((x << 5) + x + s.charCodeAt(j)) | 0; return String(x); };
+const inf = rd('sicherungInfo');
+if (z.replace(/\|/g, '') !== '' && (!inf || inf.hash !== hs(z))) { $('sich').hidden = false; $('sich').innerHTML = 'Ungesicherte Änderungen. <a href="sicherung.html">Jetzt sichern</a>'; }
 </script>
 </body>
 </html>
