@@ -11,7 +11,7 @@
   var T = [['index.html', 'index', 'Start'], ['stundenzettel.html', 'stz', 'Stundenzettel'], ['rechnungen.html', 're', 'Rechnungen'], ['adressbuch.html', 'kd', 'Kunden'], ['sicherung.html', 'si', 'Sicherung']];
   var h = document.createElement('a');
   h.className = 'appbar'; h.href = 'index.html'; h.setAttribute('aria-label', 'Zur Startseite');
-  h.innerHTML = '<img src="logo-mark.png" alt=""><i></i><b>Semira Faktura</b>';
+  h.innerHTML = '<img src="logo-mark.png" alt=""><i></i><b>SemiraCareOffice</b>' + (cur === 'index' ? '' : '<span class="back">‹ Startseite</span>');
   document.body.insertBefore(h, document.body.firstChild);
   var n = document.createElement('nav');
   n.className = 'tabbar'; n.setAttribute('aria-label', 'Hauptmenü');

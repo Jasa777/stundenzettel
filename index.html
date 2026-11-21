@@ -6,41 +6,35 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#1F5A3A">
-<title>Semira Faktura</title>
+<title>SemiraCareOffice</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:640px;margin:0 auto;padding:16px}
-.bad{color:var(--bad);font-weight:700}
+.bad{color:var(--bad);font-weight:700;margin:0 0 12px}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
 </head>
 <body>
 <main>
-<p class="hello">Herzlich willkommen,<br><strong id="nm">Semira Faktura</strong></p>
+<p class="hello">Herzlich willkommen in <strong>SemiraCareOffice</strong>.<br>Was möchtest du heute erledigen?</p>
 <p id="sich" class="bad" hidden></p>
-<a class="card stat" href="rechnungen.html?f=alle"><b id="gesamt">0</b>Rechnungen gesamt</a>
-<div class="two">
-  <a class="card stat" href="rechnungen.html?f=erledigt"><b id="erl">0</b>Erledigt</a>
-  <a class="card stat" href="rechnungen.html?f=offen"><b id="off">0</b>Offen</a>
-</div>
-<p id="ueb" class="bad" hidden></p>
-<a class="btn big" href="rechnung.html">Neue Rechnung +</a>
-<a class="btn sec big" href="stundenzettel.html">Stundenzettel erfassen</a>
+<a class="tile" href="stundenzettel.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><div class="t">Stundenzettel</div><div class="d">Zettel ausfüllen oder Foto einlesen</div></div></a>
+<a class="tile" href="rechnung.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg><div><div class="t">Neue Rechnung</div><div class="d">Aus dem Stundenzettel, als PDF oder per Mail</div></div></a>
+<a class="tile" href="rechnungen.html?f=alle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><div><div class="t">Rechnungen</div><div class="d" id="stat">Offen, erledigt, Zahlungserinnerung</div></div></a>
+<a class="tile" href="adressbuch.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.8.2 4.5 2.2 4.5 5"/></svg><div><div class="t">Kunden</div><div class="d">Anschrift und Mailadresse der Auftraggeber</div></div></a>
+<a class="tile" href="sicherung.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.5-9 6 6 0 0 1 11.5 1.5A3.8 3.8 0 0 1 17 18z"/><path d="M12 16v-6M9.5 12.5L12 10l2.5 2.5"/></svg><div><div class="t">Sicherung</div><div class="d">Daten sichern und wiederherstellen</div></div></a>
 </main>
 <script>
 const $ = id => document.getElementById(id);
 const rd = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
 const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const md = rd('meineDaten'); if (md && md.mName) $('nm').textContent = md.mName + '!';
-const l = rd('rechnungen') || [];
-const offen = l.filter(r => r.status !== 'erledigt');
-$('gesamt').textContent = l.length; $('erl').textContent = l.length - offen.length; $('off').textContent = offen.length;
 const p = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
 const h = new Date(); h.setHours(0, 0, 0, 0);
-const ue = offen.filter(r => { const f = p(r.faellig); return f && f < h; });
-if (ue.length) { $('ueb').hidden = false; $('ueb').innerHTML = ue.length + ' überfällig (' + fmt(ue.reduce((a, r) => a + (r.summe || 0), 0)) + ' €) · <a href="rechnungen.html?f=offen">ansehen</a>'; }
+const offen = (rd('rechnungen') || []).filter(r => r.status !== 'erledigt');
+const ue = offen.filter(r => { const f = p(r.faellig); return f && f < h; }).length;
+if (offen.length) $('stat').innerHTML = offen.length + ' offen (' + fmt(offen.reduce((a, r) => a + (r.summe || 0), 0)) + ' €)' + (ue ? ' · <span class="bad">' + ue + ' überfällig</span>' : '');
 const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
 const z = K.map(k => localStorage.getItem(k) || '').join('|');
 const hs = s => { let x = 5381; for (let j = 0; j < s.length; j++) x = ((x << 5) + x + s.charCodeAt(j)) | 0; return String(x); };
