@@ -245,7 +245,22 @@ function sortRows() {
   [...rowsEl.children].map((tr, i) => [tr, i]).sort((a, b) => sortKey(a[0]).localeCompare(sortKey(b[0])) || a[1] - b[1]).forEach(([tr]) => rowsEl.appendChild(tr));
   calc(); save();
 }
-rowsEl.addEventListener('change', e => { if (e.target.matches('.d,.v')) sortRows(); });
+/* Wochenende automatisch aus dem Datum (Sa/So); von Hand geändertes Häkchen bleibt bestehen */
+function autoWe(tr) {
+  if (tr.dataset.weManual) return;
+  const d = tr.querySelector('.d').value.split('.');
+  if (d.length !== 3 || d[2].length !== 4) return;
+  const dt = new Date(+d[2], +d[1] - 1, +d[0]);
+  if (dt.getDate() !== +d[0] || dt.getMonth() !== +d[1] - 1) return;
+  tr.querySelector('.we').checked = dt.getDay() === 0 || dt.getDay() === 6;
+}
+rowsEl.addEventListener('input', e => { if (e.target.matches('.d')) autoWe(e.target.closest('tr')); });
+rowsEl.addEventListener('change', e => {
+  const tr = e.target.closest('tr');
+  if (e.target.matches('.we')) tr.dataset.weManual = '1';
+  if (e.target.matches('.d')) autoWe(tr);
+  if (e.target.matches('.d,.v')) sortRows();
+});
 /* Datum automatisch mit Punkten */
 function fmtDatum(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
 function fmtZeitraum(v) {
