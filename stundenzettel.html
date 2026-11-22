@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#1F6B3A">
 <title>Stundenzettel</title>
 <style>
-:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--warn:#FFF0C7;--warn-ln:#D9A400;--ocr:#DFF1EE;color-scheme:light}
+:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--warn:#FFF0C7;--warn-ln:#D9A400;--ocr:#DFF1EE;--bad:#B3261E;color-scheme:light}
 @media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--warn:#4A3B0A;--warn-ln:#D9A400;--ocr:#16403F;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -25,19 +25,22 @@ button:focus-visible,.btn:focus-within,input:focus-visible{outline:3px solid var
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 label{display:block;font-size:.88rem;color:var(--mut)}
 input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
-.wrap{overflow-x:auto}
+.wrap{overflow:hidden}
 .full{grid-column:1/-1}
 select{font:inherit;color:var(--ink);border:1px solid var(--line);padding:7px 8px;width:100%}
 input[readonly]{background:#EFEBDD;color:var(--mut)}
-table{border-collapse:collapse;width:100%;min-width:880px}
-th{font-size:.82rem;text-align:left;color:var(--mut);font-weight:600;padding:4px 4px 6px}
-td{padding:3px 3px}
-td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:8px}
-td.c{text-align:center}
-td.c input{width:20px;height:20px}
-td.act{white-space:nowrap;padding-right:6px}
-.act button{min-width:36px;min-height:36px;padding:2px 8px;border-radius:8px;background:transparent;color:var(--pri);border:1.5px solid var(--pri);font-size:1rem;margin-right:3px}
-.act button.del{color:var(--bad);border-color:var(--bad)}
+.hint{font-size:.85rem;color:var(--mut);margin:0 0 8px}
+.hd{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:.78rem;font-weight:600;color:var(--mut);padding:0 2px 4px}
+table,tbody{display:block;width:100%}
+tr{display:grid;grid-template-columns:repeat(12,1fr);gap:6px 8px;align-items:end;padding:10px 2px;border-bottom:1px solid var(--line);background:var(--surf);position:relative;touch-action:pan-y}
+tr::after{content:"Löschen";position:absolute;left:100%;top:0;bottom:0;width:100%;display:flex;align-items:center;padding-left:16px;background:var(--bad);color:#fff;font-weight:600}
+td{padding:0;min-width:0}
+td:nth-child(-n+3){grid-column:span 4}
+td:nth-child(4),td:nth-child(7){grid-column:span 3}
+td:nth-child(5),td:nth-child(6),td:nth-child(8){grid-column:span 2}
+td[data-l]::before{content:attr(data-l);display:block;font-size:.72rem;color:var(--mut);margin-bottom:2px}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap;line-height:38px}
+td.c input{width:22px;height:22px;margin:0;display:block}
 .sr{position:absolute;left:-9999px}
 input.ocr{background:var(--ocr)}
 input.miss{background:var(--warn);border-color:var(--warn-ln)}
@@ -52,7 +55,7 @@ input.miss{background:var(--warn);border-color:var(--warn-ln)}
 details{margin-top:12px}
 summary{cursor:pointer;font-weight:600;color:var(--pri)}
 textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%;margin:8px 0}
-@media print{body{background:#fff;color:#000}.noprint{display:none}section{border:0;padding:0}input{border:0;border-bottom:1px solid #999;border-radius:0;background:#fff!important}}
+@media print{body{background:#fff;color:#000}.noprint{display:none}tr::after{display:none}section{border:0;padding:0}input{border:0;border-bottom:1px solid #999;border-radius:0;background:#fff!important}}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
@@ -93,11 +96,10 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
 
 <section>
   <h2>Einsätze</h2>
+  <p class="hint noprint">Zum Löschen einen Einsatz nach links wischen. Die Einsätze werden nach dem Datum sortiert.</p>
   <div class="wrap">
-  <table>
-    <thead><tr><th class="noprint"><span class="sr">Zeile</span></th><th>Datum</th><th>von</th><th>bis</th><th>Pause (Min.)</th><th>Std.</th><th>Nacht (Std.)</th><th>Wochenende</th><th>Feiertag</th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <div class="hd"><span>Datum</span><span>von</span><span>bis</span></div>
+  <table><tbody id="rows"></tbody></table>
   </div>
   <p class="legend noprint"><b style="background:var(--ocr)">grün</b> von der Texterkennung eingetragen, bitte prüfen &nbsp; <b style="background:var(--warn)">gelb</b> fehlt noch</p>
   <div class="actions noprint">
@@ -134,15 +136,14 @@ const mins = s => { if(!s) return null; const [h,m] = s.split(':').map(Number); 
 function addRow(d = {}) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td class="act noprint"><button type="button" data-a="up" aria-label="Zeile nach oben">↑</button><button type="button" data-a="down" aria-label="Zeile nach unten">↓</button><button type="button" class="del" data-a="del" aria-label="Zeile löschen">✕</button></td>
     <td><input class="d" placeholder="TT.MM.JJJJ" inputmode="numeric" aria-label="Datum"></td>
     <td><input class="v" type="time" aria-label="Arbeitszeit von"></td>
     <td><input class="b" type="time" aria-label="Arbeitszeit bis"></td>
-    <td><input class="p" type="number" min="0" step="1" inputmode="numeric" aria-label="Pause in Minuten"></td>
-    <td class="n h">–</td>
-    <td class="n nt">–</td>
-    <td class="c"><input class="we" type="checkbox" aria-label="Wochenende"></td>
-    <td class="c"><input class="ft" type="checkbox" aria-label="Feiertag"></td>`;
+    <td data-l="Pause (Min.)"><input class="p" type="number" min="0" step="1" inputmode="numeric" aria-label="Pause in Minuten"></td>
+    <td class="n h" data-l="Std.">–</td>
+    <td class="n nt" data-l="Nacht">–</td>
+    <td class="c" data-l="Wochenende"><input class="we" type="checkbox" aria-label="Wochenende"></td>
+    <td class="c" data-l="Feiertag"><input class="ft" type="checkbox" aria-label="Feiertag"></td>`;
   rowsEl.appendChild(tr);
   const set = (cls, val, ocr) => {
     const el = tr.querySelector('.' + cls);
@@ -203,24 +204,48 @@ function load() {
     const s = JSON.parse(localStorage.getItem('stundenzettel') || 'null');
     if (!s) return false;
     HEAD.forEach(k => { if (s.head[k] !== undefined) $(k).value = s.head[k]; });
-    s.rows.forEach(r => addRow(r));
+    s.rows.filter(r => r.d || r.v || r.b || r.p || r.we || r.ft).forEach(r => addRow(r));
     return s.rows.length > 0;
   } catch (e) { return false; }
 }
 
 
-rowsEl.addEventListener('click', e => {
-  const b = e.target.closest('button[data-a]'); if (!b) return;
-  const tr = b.closest('tr'), a = b.dataset.a;
-  if (a === 'up' && tr.previousElementSibling) rowsEl.insertBefore(tr, tr.previousElementSibling);
-  else if (a === 'down' && tr.nextElementSibling) rowsEl.insertBefore(tr.nextElementSibling, tr);
-  else if (a === 'del') {
-    const voll = ['d', 'v', 'b', 'p'].some(c => tr.querySelector('.' + c).value) || tr.querySelector('.we').checked || tr.querySelector('.ft').checked;
-    if (voll && !confirm('Diese Zeile löschen?')) return;
-    tr.remove();
-  }
+/* Löschen durch Wischen nach links */
+let sw = null;
+const zeileVoll = tr => ['d','v','b','p'].some(c => tr.querySelector('.' + c).value) || tr.querySelector('.we').checked || tr.querySelector('.ft').checked;
+rowsEl.addEventListener('touchstart', e => {
+  const tr = e.target.closest('tr'); if (!tr) return;
+  const t = e.touches[0]; sw = { tr, x: t.clientX, y: t.clientY, dx: 0 }; tr.style.transition = 'none';
+}, { passive: true });
+rowsEl.addEventListener('touchmove', e => {
+  if (!sw) return;
+  const t = e.touches[0], mx = t.clientX - sw.x;
+  if (Math.abs(t.clientY - sw.y) > Math.abs(mx)) { sw.dx = 0; return; }
+  sw.dx = mx; sw.tr.style.transform = 'translateX(' + Math.min(0, mx) + 'px)';
+}, { passive: true });
+const swEnde = () => {
+  if (!sw) return;
+  const { tr, dx } = sw; sw = null;
+  tr.style.transition = 'transform .2s';
+  if (dx < -90) {
+    if (zeileVoll(tr) && !confirm('Diese Zeile löschen?')) { tr.style.transform = ''; return; }
+    tr.style.transform = 'translateX(-100%)';
+    setTimeout(() => { tr.remove(); if (!rowsEl.children.length) addRow(); calc(); save(); }, 180);
+  } else tr.style.transform = '';
+};
+rowsEl.addEventListener('touchend', swEnde, { passive: true });
+rowsEl.addEventListener('touchcancel', () => { if (sw) { sw.tr.style.transform = ''; sw = null; } }, { passive: true });
+
+/* Sortierung nach Datum und Beginn */
+function sortKey(tr) {
+  const d = tr.querySelector('.d').value.split('.');
+  return (d.length === 3 && d[2].length === 4 ? d[2] + d[1] + d[0] : '9999') + tr.querySelector('.v').value;
+}
+function sortRows() {
+  [...rowsEl.children].map((tr, i) => [tr, i]).sort((a, b) => sortKey(a[0]).localeCompare(sortKey(b[0])) || a[1] - b[1]).forEach(([tr]) => rowsEl.appendChild(tr));
   calc(); save();
-});
+}
+rowsEl.addEventListener('change', e => { if (e.target.matches('.d,.v')) sortRows(); });
 /* Datum automatisch mit Punkten */
 function fmtDatum(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
 function fmtZeitraum(v) {
@@ -247,7 +272,7 @@ $('print').onclick = () => window.print();
 $('reset').onclick = () => {
   if (!confirm('Wirklich alle Einträge löschen?')) return;
   rowsEl.innerHTML = ''; HEAD.slice(0, 5).forEach(k => $(k).value = ''); $('kunde').value = ''; $('km').value = ''; prefillStandard();
-  for (let i = 0; i < 10; i++) addRow();
+  for (let i = 0; i < 2; i++) addRow();
   calc(); save();
 };
 
@@ -287,6 +312,7 @@ function putRows(parsed) {
     const nr = addRow(r);
     if (tr) { rowsEl.insertBefore(nr, tr); tr.remove(); }
   });
+  sortRows();
 }
 
 async function prep(file) {
@@ -376,7 +402,7 @@ function zeigeRnr() {
   $('rnr').value = m.mRechnungsnr || (new Date().getFullYear() + '-001');
 }
 zeigeRnr();
-if (!load()) for (let i = 0; i < 10; i++) addRow();
+load(); while (rowsEl.children.length < 2) addRow();
 function prefillStandard() {
   let m = {}; try { m = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
   [['auftragnehmer', 'mName'], ['lohn', 'mStundenlohn'], ['zNacht', 'mZuNacht'], ['zWe', 'mZuWe'], ['zFt', 'mZuFt']].forEach(([id, k]) => { if (!$(id).value && m[k] !== undefined && m[k] !== '') $(id).value = m[k]; });
