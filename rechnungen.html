@@ -2,38 +2,45 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
-<meta name="theme-color" content="#1F6B3A">
+<meta name="theme-color" content="#1F5A3A">
 <title>Rechnungen</title>
 <style>
-:root{--bg:#F4F8F8;--surf:#fff;--ink:#14262B;--mut:#587077;--line:#D0DCDF;--pri:#0E5A61;--pri-ink:#fff;--bad:#B42318;--ok:#1B7A3E;color-scheme:light}
-@media(prefers-color-scheme:dark){:root{--bg:#0F1A1D;--surf:#16262A;--ink:#E7F0F1;--mut:#9DB3B8;--line:#2B4046;--pri:#4FB3BB;--pri-ink:#0B1A1D;--bad:#FF8A80;--ok:#6FD39A;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{margin:0;color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:820px;margin:0 auto;padding:16px}
-h1{font-size:1.7rem;margin:8px 0 2px}
-.sub{color:var(--mut);margin:0 0 14px}
-section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
-h2{font-size:1.05rem;margin:0 0 10px}
-button,.btn{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer;display:inline-block;text-decoration:none}
-button.sec,.btn.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
+h1{font-size:1.7rem;margin:8px 0 10px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.tabs button{padding:8px 2px;font-size:.85rem;line-height:1.2;white-space:normal;min-height:48px;flex-direction:column}
+.tabs button small{font-weight:400;opacity:.85}
+button,.btn{font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+button{background:var(--pri);color:var(--pri-ink);border:0;padding:9px 14px}
+button.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
 button.del{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
-button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset:1px}
-.tabs{display:flex;gap:8px;margin-bottom:12px}
-.tabs button{flex:1}
-.card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
-.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+button:focus-visible,.card:focus-visible{outline:3px solid #D9A400;outline-offset:1px}
+.total{font-size:1.1rem;margin:0 0 10px}
+.card{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:var(--surf);cursor:pointer}
+.row{display:flex;gap:10px;align-items:flex-start}
+.pdfi{flex:none;width:34px;height:42px;border:1.5px solid var(--pri);border-radius:4px;color:var(--pri);font-size:.62rem;font-weight:700;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
+.grow{flex:1;min-width:0}
 .nr{font-weight:700}
-.sum{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sum{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 .mut{color:var(--mut);font-size:.9rem}
-.bad{color:var(--bad);font-weight:700}
-.ok{color:var(--ok);font-weight:700}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.total{font-size:1.1rem}
 .note{font-size:.85rem;color:var(--mut)}
-#imp{position:absolute;opacity:0;width:1px;height:1px}
+.ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.ov[hidden]{display:none}
+.sheet{background:var(--surf);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 4px;font-size:1.2rem;color:var(--pri)}
+.stack{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.stack button{width:100%;min-height:48px}
+.ov.full{align-items:stretch;background:var(--bg)}
+.vbox{display:flex;flex-direction:column;width:100%;padding-top:env(safe-area-inset-top)}
+.vbar{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.vbar button{flex:1}
+#vf{flex:1;border:0;width:100%;background:#fff}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
@@ -41,85 +48,145 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset
 <body>
 <main>
 <h1>Rechnungen</h1>
-
-<section>
-  <div class="tabs">
-    <button id="tAlle" class="sec">Alle</button>
-    <button id="tOffen" class="sec">Offen</button>
-    <button id="tErl" class="sec">Erledigt</button>
-  </div>
-  <p id="total" class="total"></p>
-  <div id="list"></div>
-</section>
-<a class="btn big" href="rechnung.html">+ Neue Rechnung</a>
-
+<div class="tabs" role="tablist">
+  <button data-t="alle" class="sec"></button>
+  <button data-t="offen" class="sec"></button>
+  <button data-t="erledigt" class="sec"></button>
+  <button data-t="geloescht" class="sec"></button>
+</div>
+<p id="total" class="total"></p>
+<div id="list"></div>
+<a class="btn big" href="stundenzettel.html" style="margin-top:6px">+ Neue Rechnung beginnen</a>
 </main>
 
+<div class="ov" id="dlg" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dt">
+  <h2 id="dt">Was möchtest du tun?</h2>
+  <p id="dsub" class="note"></p>
+  <div class="stack" id="dbtn"></div>
+</div></div>
+
+<div class="ov full" id="viewer" hidden><div class="vbox">
+  <div class="vbar"><button id="vShare">Teilen / Drucken</button><button class="sec" id="vClose">Schließen</button></div>
+  <iframe id="vf" title="Rechnung als PDF"></iframe>
+</div></div>
+
+<script src="pdf-lib.min.js"></script>
+<script src="rechnung-pdf.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const heute = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
-const datum = d => d.toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
+const heute = () => new Date().toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
 const parseD = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
-let tab = (new URLSearchParams(location.search).get('f')) || 'alle';
-if (['alle', 'offen', 'erledigt'].indexOf(tab) < 0) tab = 'alle';
+const TABS = { alle: 'Alle', offen: 'Offen', erledigt: 'Erledigt', geloescht: 'Gelöscht' };
+let tab = new URLSearchParams(location.search).get('f') || 'alle'; if (!TABS[tab]) tab = 'alle';
+let sel = -1, blobUrl = '', blobFile = null;
 
-function lade() { try { return JSON.parse(localStorage.getItem('rechnungen') || '[]'); } catch (e) { return []; } }
-function sichern(l) { try { localStorage.setItem('rechnungen', JSON.stringify(l)); } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; } }
+function lade() { try { return JSON.parse(localStorage.getItem('rechnungen') || '[]') || []; } catch (e) { return []; } }
+function sichern(l) { try { localStorage.setItem('rechnungen', JSON.stringify(l)); return true; } catch (e) { alert('Speichern war nicht möglich.'); return false; } }
+function zustand(r) { return r.status === 'geloescht' ? 'geloescht' : r.status === 'erledigt' ? 'erledigt' : r.versandt ? 'offen' : 'neu'; }
+const inTab = (r, t) => t === 'alle' ? zustand(r) !== 'geloescht' : zustand(r) === t;
 function meinName() { try { const m = JSON.parse(localStorage.getItem('meineDaten') || '{}'); return m.mMailName || m.mName || ''; } catch (e) { return ''; } }
+const ueberfaellig = r => { const f = parseD(r.faellig), h = new Date(); h.setHours(0, 0, 0, 0); return zustand(r) === 'offen' && f && f < h; };
+function oeffneMail(url) { location.href = url; }
 
-function ueberfaellig(r) { const f = parseD(r.faellig); return r.status !== 'erledigt' && f && f < heute(); }
-
-function erinnerung(r) {
-  const body = 'Sehr geehrte Damen und Herren,\n\nbei der Durchsicht meiner Unterlagen ist mir aufgefallen, dass die Rechnung Nr. ' + r.nr +
-    (r.datum ? ' vom ' + r.datum : '') + ' über ' + fmt(r.summe) + ' € noch nicht beglichen ist. Das Zahlungsziel war der ' + (r.faellig || '[Datum]') +
-    '.\n\nSollten Sie die Zahlung bereits veranlasst haben, betrachten Sie dieses Schreiben bitte als gegenstandslos. Andernfalls bitte ich Sie, den Betrag in den nächsten Tagen zu überweisen.\n\nBei Rückfragen melde ich mich gern.\n\nMit freundlichen Grüßen\n' + meinName();
+function mailErinnerung(r) {
+  const body = 'Sehr geehrte Damen und Herren,\n\nbei der Durchsicht meiner Unterlagen ist mir aufgefallen, dass die Rechnung Nr. ' + r.nr + (r.datum ? ' vom ' + r.datum : '') + ' über ' + fmt(r.summe || 0) + ' € noch nicht beglichen ist. Das Zahlungsziel war der ' + (r.faellig || '[Datum]') + '.\n\nSollten Sie die Zahlung bereits veranlasst haben, betrachten Sie dieses Schreiben bitte als gegenstandslos. Andernfalls bitte ich Sie, den Betrag in den nächsten Tagen zu überweisen.\n\nBei Rückfragen stehe ich Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen\n\n' + meinName();
   return 'mailto:' + encodeURIComponent(r.mail || '').replace('%40', '@') + '?subject=' + encodeURIComponent('Zahlungserinnerung Rechnung Nr. ' + r.nr) + '&body=' + encodeURIComponent(body);
+}
+function mailKopie(r) {   // bezahlte Rechnung: Kopie ohne Zahlungsaufforderung, ohne Empfängeradresse
+  const body = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie eine Kopie meiner Rechnung Nr. ' + r.nr + (r.datum ? ' vom ' + r.datum : '') + ' über ' + fmt(r.summe || 0) + ' €.\n\nMit freundlichen Grüßen\n\n' + meinName();
+  return 'mailto:?subject=' + encodeURIComponent('Rechnung Nr. ' + r.nr + ' (Kopie)') + '&body=' + encodeURIComponent(body);
 }
 
 function zeige() {
   const l = lade();
-  const offen = l.filter(r => r.status !== 'erledigt'), erl = l.filter(r => r.status === 'erledigt');
-  $('tAlle').className = tab === 'alle' ? '' : 'sec';
-  $('tAlle').textContent = 'Alle (' + l.length + ')';
-  $('tOffen').className = tab === 'offen' ? '' : 'sec';
-  $('tErl').className = tab === 'erledigt' ? '' : 'sec';
-  $('tOffen').textContent = 'Offen (' + offen.length + ')';
-  $('tErl').textContent = 'Erledigt (' + erl.length + ')';
-  const liste = (tab === 'offen' ? offen : tab === 'alle' ? l : erl).slice().sort((a, b) => (parseD(b.datum) || 0) - (parseD(a.datum) || 0));
-  const s = liste.reduce((a, r) => a + (r.summe || 0), 0);
-  $('total').innerHTML = (tab === 'offen' ? 'Noch offen: ' : tab === 'alle' ? 'Alle Rechnungen: ' : 'Bezahlt: ') + '<strong>' + fmt(s) + ' €</strong>';
-  if (!liste.length) { $('list').innerHTML = '<p class="mut">' + (tab === 'offen' ? 'Keine offenen Rechnungen.' : 'Noch keine erledigten Rechnungen.') + '</p>'; return; }
-  $('list').innerHTML = liste.map(r => {
-    const i = l.indexOf(r), ue = ueberfaellig(r), name = String(r.empfaenger || '').split('\n')[0];
-    return `<div class="card">
-      <div class="row"><span class="nr">${esc(r.nr)}</span><span class="sum">${fmt(r.summe || 0)} €</span></div>
-      <div class="mut">${esc(name)}${r.zeitraum ? ' · ' + esc(r.zeitraum) : ''}</div>
-      <div class="mut">Rechnung vom ${esc(r.datum)}${r.status === 'erledigt' ? ' · bezahlt' + (r.bezahltAm ? ' am ' + esc(r.bezahltAm) : '') : ' · fällig am ' + esc(r.faellig || '–')}</div>
-      <div><span class="chip ${r.status === 'erledigt' ? 'ok' : (ue ? 'bad' : 'offen')}">${r.status === 'erledigt' ? 'Erledigt' : (ue ? 'Überfällig' : 'Offen')}</span></div>
-      <div class="actions">
-        ${r.status === 'erledigt'
-          ? `<button class="sec" data-a="open" data-i="${i}">Wieder öffnen</button>`
-          : `<button data-a="done" data-i="${i}">Bezahlt</button>${ue ? `<a class="btn sec" href="${erinnerung(r)}">Zahlungserinnerung</a>` : ''}`}
-        <button class="del" data-a="del" data-i="${i}">Löschen</button>
-      </div></div>`;
+  document.querySelectorAll('.tabs button').forEach(b => {
+    const t = b.dataset.t; b.className = t === tab ? '' : 'sec';
+    b.innerHTML = TABS[t] + '<small>' + l.filter(r => inTab(r, t)).length + '</small>';
+  });
+  const liste = l.map((r, i) => ({ r, i })).filter(o => inTab(o.r, tab)).sort((a, b) => ((parseD(b.r.datum) || 0) - (parseD(a.r.datum) || 0)) || (b.i - a.i));
+  const s = liste.reduce((a, o) => a + (o.r.summe || 0), 0);
+  $('total').innerHTML = tab === 'alle' ? 'Alle Rechnungen: <strong>' + fmt(s) + ' €</strong>' : tab === 'offen' ? 'Noch offen: <strong>' + fmt(s) + ' €</strong>' : '';
+  $('total').hidden = !$('total').innerHTML;
+  if (!liste.length) { $('list').innerHTML = '<p class="mut">Keine Rechnungen in diesem Register.</p>'; return; }
+  $('list').innerHTML = liste.map(({ r, i }) => {
+    const z = zustand(r), name = String(r.empfaenger || '').split('\n')[0];
+    const chip = z === 'geloescht' ? '<span class="chip bad">Gelöscht' + (r.geloeschtAm ? ' am ' + esc(r.geloeschtAm) : '') + '</span>'
+      : z === 'erledigt' ? '<span class="chip ok">Bezahlt' + (r.bezahltAm ? ' am ' + esc(r.bezahltAm) : '') + '</span>'
+      : z === 'neu' ? '<span class="chip offen">Noch nicht verschickt</span>'
+      : '<span class="chip ' + (ueberfaellig(r) ? 'bad' : 'offen') + '">' + (ueberfaellig(r) ? 'Überfällig seit ' : 'Fällig am ') + esc(r.faellig || '–') + '</span>';
+    const knopf = (tab === 'alle' && z === 'neu') ? '<button data-a="versandt">Verschickt</button>' : (tab === 'offen' && z === 'offen') ? '<button data-a="bezahlt">Bezahlt</button>' : '';
+    const betrag = (tab === 'erledigt' || tab === 'geloescht') ? '' : '<span class="sum">' + fmt(r.summe || 0) + ' €</span>';
+    return '<div class="card" data-i="' + i + '" role="button" tabindex="0" aria-label="Rechnung ' + esc(r.nr) + ', Aktionen öffnen"><div class="row"><div class="pdfi">PDF</div><div class="grow"><div class="nr">' + esc(r.nr) + '</div><div class="mut">' + esc(name) + (r.zeitraum ? ' · ' + esc(r.zeitraum) : '') + '</div><div class="mut">Rechnung vom ' + esc(r.datum) + '</div></div>' + betrag + '</div><div style="margin-top:6px">' + chip + '</div>' + (knopf ? '<div class="actions">' + knopf + '</div>' : '') + '</div>';
   }).join('');
 }
 
-$('list').addEventListener('click', e => {
-  const b = e.target.closest('button[data-a]'); if (!b) return;
-  const l = lade(), i = +b.dataset.i, r = l[i]; if (!r) return;
-  if (b.dataset.a === 'done') { r.status = 'erledigt'; r.bezahltAm = datum(new Date()); }
-  else if (b.dataset.a === 'open') { r.status = 'offen'; delete r.bezahltAm; }
-  else if (b.dataset.a === 'del') { if (!confirm('Rechnung ' + r.nr + ' wirklich löschen?')) return; l.splice(i, 1); }
+/* ----- Aktionsfenster ----- */
+function frage(i) {
+  const r = lade()[i]; if (!r) return; sel = i;
+  const o = (a, t, k) => '<button' + (k ? ' class="' + k + '"' : '') + ' data-d="' + a + '">' + t + '</button>';
+  let txt = 'Was möchtest du tun?', b;
+  if (tab === 'geloescht') { txt = 'Möchtest du diese Rechnung wirklich löschen? Das kann nicht rückgängig gemacht werden. Rechnungen müssen meist mehrere Jahre aufbewahrt werden.'; b = o('endgueltig', 'Ja, endgültig löschen', 'del') + o('wieder', 'Wiederherstellen', 'sec') + o('nichts', 'Nein', 'sec'); }
+  else if (tab === 'offen') b = o('erinnerung', 'Zahlungserinnerung per Mail') + o('bezahlt', 'Bezahlt', 'sec') + o('pdf', 'PDF anzeigen / drucken', 'sec') + o('del', 'Löschen', 'del') + o('nichts', 'Nichts', 'sec');
+  else if (tab === 'erledigt') b = o('pdf', 'PDF anzeigen / drucken') + o('mailkopie', 'Verschicken (Kopie, ohne Empfänger)', 'sec') + o('wieder', 'Wieder auf offen setzen', 'sec') + o('del', 'Löschen', 'del') + o('nichts', 'Nichts', 'sec');
+  else b = o('pdf', 'PDF anzeigen / drucken') + o('mail', 'Verschicken (Mail vorbereiten)', 'sec') + o('del', 'Löschen', 'del') + o('nichts', 'Nichts', 'sec');
+  $('dt').textContent = tab === 'geloescht' ? 'Rechnung ' + r.nr : 'Rechnung ' + r.nr + ' – was möchtest du tun?';
+  $('dsub').textContent = tab === 'geloescht' ? txt : (r.absender ? 'Die Mail enthält nur den Text. Das PDF teilst du über „PDF anzeigen / drucken“.' : 'Für diese ältere Rechnung ist kein PDF möglich.');
+  $('dbtn').innerHTML = b; $('dlg').hidden = false;
+  if (!r.absender) $('dbtn').querySelectorAll('[data-d=pdf]').forEach(x => x.disabled = true);
+}
+function zu() { $('dlg').hidden = true; sel = -1; }
+
+async function zeigePdf(r) {
+  if (typeof PDFLib === 'undefined' || !window.RE) { alert('Für das PDF fehlen die Dateien pdf-lib.min.js und rechnung-pdf.js im GitHub-Ordner.'); return; }
+  try {
+    const D = RE.recToD(r), blob = await RE.pdf(D);
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = URL.createObjectURL(blob); blobFile = new File([blob], RE.pdfName(D), { type: 'application/pdf' });
+    $('vf').src = blobUrl + '#toolbar=0&navpanes=0&view=FitH'; $('viewer').hidden = false;
+  } catch (e) { alert('Das PDF konnte nicht erstellt werden.'); }
+}
+$('vClose').onclick = () => { $('viewer').hidden = true; $('vf').src = 'about:blank'; };
+$('vShare').onclick = async () => {
+  if (!blobFile) return;
+  try { if (navigator.canShare && navigator.canShare({ files: [blobFile] })) { await navigator.share({ files: [blobFile], title: blobFile.name }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  window.open(blobUrl, '_blank');
+};
+
+$('dbtn').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-d]'); if (!b || b.disabled) return;
+  const a = b.dataset.d, l = lade(), r = l[sel]; if (!r) { zu(); return; }
+  const i = sel; zu();
+  if (a === 'nichts') return;
+  if (a === 'pdf') { await zeigePdf(r); return; }
+  if (a === 'mail') { oeffneMail(RE.mailHref(RE.recToD(r))); return; }
+  if (a === 'mailkopie') { oeffneMail(mailKopie(r)); return; }
+  if (a === 'erinnerung') { oeffneMail(mailErinnerung(r)); return; }
+  if (a === 'bezahlt') { r.status = 'erledigt'; r.bezahltAm = heute(); }
+  else if (a === 'del') { r.vorher = { status: r.status, versandt: !!r.versandt }; r.status = 'geloescht'; r.geloeschtAm = heute(); }
+  else if (a === 'wieder') {
+    if (r.status === 'geloescht') { const v = r.vorher || {}; r.status = v.status || 'offen'; r.versandt = !!v.versandt; delete r.vorher; delete r.geloeschtAm; }
+    else { r.status = 'offen'; delete r.bezahltAm; r.versandt = true; }
+  }
+  else if (a === 'endgueltig') { l.splice(i, 1); }
   sichern(l); zeige();
 });
-$('tAlle').onclick = () => { tab = 'alle'; zeige(); };
-$('tOffen').onclick = () => { tab = 'offen'; zeige(); };
-$('tErl').onclick = () => { tab = 'erledigt'; zeige(); };
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) zu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { zu(); } });
 
-
+$('list').addEventListener('click', e => {
+  const k = e.target.closest('button[data-a]');
+  if (k) {
+    const l = lade(), r = l[+k.closest('.card').dataset.i]; if (!r) return;
+    if (k.dataset.a === 'versandt') { r.versandt = true; r.versandtAm = heute(); }
+    else if (k.dataset.a === 'bezahlt') { r.status = 'erledigt'; r.bezahltAm = heute(); }
+    sichern(l); zeige(); return;
+  }
+  const c = e.target.closest('.card'); if (c) frage(+c.dataset.i);
+});
+$('list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('card')) { e.preventDefault(); frage(+e.target.dataset.i); } });
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.t; zeige(); }));
 zeige();
 </script>
 </body>
