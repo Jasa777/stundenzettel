@@ -33,6 +33,12 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset
 .note{font-size:.88rem;color:var(--mut)}
 .bad{color:var(--bad);font-weight:600}
 #fehler{border-color:var(--bad)}
+.fm label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:8px}
+.fm input,.fm textarea{font:inherit;color:var(--ink);border:1px solid var(--line);padding:8px;width:100%}
+.pe{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
+.pe .g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.fm .tot{font-weight:700;margin:8px 0}
+h2 .chip{font-size:.72rem;vertical-align:middle;margin-left:6px}
 #fehler ul{margin:6px 0 0;padding-left:20px}
 </style>
 <link rel="stylesheet" href="style.css">
@@ -56,21 +62,24 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset
   </section>
 
   <section>
-    <h2>1. Empfänger und Zeitraum</h2>
+    <h2>1. Empfänger und Zeitraum <span class="chip offen" id="ca" hidden>manuell geändert</span></h2>
     <dl class="kv" id="ba"></dl>
-    <button class="conf" data-b="a">Bestätigen</button>
+    <div class="fm" id="fa" hidden></div>
+    <div class="actions" id="xa"><button class="conf" data-b="a">Bestätigen</button><button class="sec chg" data-b="a">Ändern</button></div>
   </section>
 
   <section>
-    <h2>2. Leistungen und Beträge</h2>
+    <h2>2. Leistungen und Beträge <span class="chip offen" id="cb" hidden>manuell geändert</span></h2>
     <div id="bb"></div>
-    <button class="conf" data-b="b">Bestätigen</button>
+    <div class="fm" id="fb" hidden></div>
+    <div class="actions" id="xb"><button class="conf" data-b="b">Bestätigen</button><button class="sec chg" data-b="b">Ändern</button></div>
   </section>
 
   <section>
-    <h2>3. Absender und Bankverbindung</h2>
+    <h2>3. Absender und Bankverbindung <span class="chip offen" id="cc" hidden>manuell geändert</span></h2>
     <dl class="kv" id="bc"></dl>
-    <button class="conf" data-b="c">Bestätigen</button>
+    <div class="fm" id="fc" hidden></div>
+    <div class="actions" id="xc"><button class="conf" data-b="c">Bestätigen</button><button class="sec chg" data-b="c">Ändern</button></div>
   </section>
 
   <section>
@@ -117,7 +126,7 @@ const num = v => parseFloat(String(v == null ? '' : v).replace(',', '.')) || 0;
 const rd = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
 const mins = s => { if (!s) return null; const [h, m] = s.split(':').map(Number); return h * 60 + m; };
 const dts = d => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-let D = null, ok = { a: false, b: false, c: false }, fehler = [], done = false, pdfUrl = '', pdfBlob = null;
+let D = null, ok = { a: false, b: false, c: false }, geaendert = { a: false, b: false, c: false }, editing = null, fehler = [], done = false, pdfUrl = '', pdfBlob = null;
 
 function berechne(st) {
   const head = (st && st.head) || {}, md = rd('meineDaten') || {};
@@ -173,8 +182,8 @@ function pruefe() {
   const L = (t, h, l) => f.push('<li>' + t + ' <a href="' + h + '">' + l + '</a></li>');
   if (!D.empf) L('Es ist kein Auftraggeber ausgewählt.', 'stundenzettel.html', 'Im Stundenzettel wählen');
   if (!D.zeit) L('Der Leistungszeitraum fehlt.', 'stundenzettel.html', 'Im Stundenzettel ergänzen');
-  if (!(D.s.lohn > 0)) L('Der Stundenlohn fehlt.', 'stundenzettel.html', 'Im Stundenzettel eintragen');
-  if (D.km > 0 && !(D.satz > 0)) L('Für die Kilometer fehlt der Kilometersatz.', 'meine-daten.html', 'In Meine Daten eintragen');
+  if (!D.P.some(p => p.e > 0)) L('Der Stundenlohn fehlt.', 'stundenzettel.html', 'Im Stundenzettel eintragen');
+  if (!geaendert.b && D.km > 0 && !(D.satz > 0)) L('Für die Kilometer fehlt der Kilometersatz.', 'meine-daten.html', 'In Meine Daten eintragen');
   if (!D.name) L('Dein Name fehlt.', 'meine-daten.html', 'In Meine Daten eintragen');
   if (!D.iban) L('Die IBAN fehlt.', 'meine-daten.html', 'In Meine Daten eintragen');
   if ((rd('rechnungen') || []).some(r => r.nr === D.nr) || (rd('geloeschtLog') || []).some(r => r.nr === D.nr)) L('Die Rechnungsnummer ' + esc(D.nr) + ' wurde schon verwendet.', 'meine-daten.html', 'In Meine Daten ändern');
@@ -186,19 +195,21 @@ function zeige() {
   $('ba').innerHTML = kv([['Rechnungsnummer', D.nr], ['Rechnungsdatum', D.datum], ['Empfänger', D.empf], ['E-Mail Empfänger', D.mail, '– nicht hinterlegt (nur für den Mailversand)'], ['Leistungszeitraum', D.zeit], ['Bereich / Station', D.bereich || '–']]);
   $('bb').innerHTML = D.P.map(p => '<div class="pos"><div>' + esc(p.t) + '</div><div class="pm"><span>' + fmt(p.q) + ' ' + p.u + ' × ' + fmt(p.e) + ' €</span><b>' + fmt(Math.round(p.b * 100) / 100) + ' €</b></div></div>').join('') +
     '<div class="tot"><span>Rechnungsbetrag</span><span>' + fmt(D.sum) + ' €</span></div>' +
-    '<dl class="kv">' + kv([['Zahlungsziel', D.tage + ' Tage, fällig am ' + D.faellig], ['Umsatzsteuer', 'befreit nach § 4 Nr. 14 UStG']]) + '</dl>';
+    '<dl class="kv">' + kv([['Zahlungsziel', geaendert.b ? 'zahlbar bis ' + D.faellig : D.tage + ' Tage, fällig am ' + D.faellig], ['Umsatzsteuer', 'befreit nach § 4 Nr. 14 UStG']]) + '</dl>';
   $('bc').innerHTML = kv([['Name', D.name], ['Anschrift', D.adresse], ['Telefon', D.tel, '–'], ['E-Mail', D.absMail, '–'], ['Steuernummer', D.steuer, '–'], ['Kontoinhaber', D.kontoinhaber, '–'], ['Bank', D.bank, '–'], ['IBAN', D.iban], ['BIC', D.bic, '–']]);
   fehler = pruefe();
   $('fehler').hidden = !fehler.length; $('fehlerListe').innerHTML = fehler.join('');
   buttons();
 }
-function bereit() { return !fehler.length && ok.a && ok.b && ok.c; }
+function bereit() { return !fehler.length && ok.a && ok.b && ok.c && !editing; }
 function buttons() {
   document.querySelectorAll('.conf').forEach(b => {
     b.disabled = !!fehler.length || done;
     b.className = 'conf' + (ok[b.dataset.b] ? ' ok' : '');
     b.textContent = ok[b.dataset.b] ? '✓ Bestätigt' : 'Bestätigen';
   });
+  ['a', 'b', 'c'].forEach(k => { $('c' + k).hidden = !geaendert[k]; });
+  document.querySelectorAll('.chg').forEach(b => { b.disabled = done || !!editing; });
   $('frage').hidden = !(bereit() && !done);
   $('hinweis').hidden = bereit() || done;
 }
@@ -238,6 +249,62 @@ function markiereVersandt() {
     if (r && !r.versandt) { r.versandt = true; r.versandtAm = dts(new Date()); localStorage.setItem('rechnungen', JSON.stringify(list)); }
   } catch (e) {}
 }
+
+/* ----- Daten manuell ändern ----- */
+const numE = v => parseFloat(String(v == null ? '' : v).replace(',', '.')) || 0;
+function fmtD(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
+function fmtZ(v) { const p = String(v).split(/\s*[–—-]\s*/); if (p.length > 1) return fmtD(p[0]) + ' – ' + fmtD(p.slice(1).join('')); const d = String(v).replace(/\D/g, '').slice(0, 16), a = fmtD(d.slice(0, 8)), b = fmtD(d.slice(8)); return b ? a + ' – ' + b : a; }
+const inp = (id, lab, v, ex) => '<label>' + lab + '<input id="' + id + '" value="' + esc(v) + '"' + (ex || '') + '></label>';
+const ta = (id, lab, v) => '<label>' + lab + '<textarea id="' + id + '" rows="3">' + esc(v) + '</textarea></label>';
+function posZeile(p) {
+  return '<div class="pe"><label>Leistung<input class="t" value="' + esc(p.t) + '"></label><div class="g"><label>Menge<input class="q" type="number" step="0.01" inputmode="decimal" value="' + esc(Math.round(p.q * 100) / 100) + '"></label><label>Einheit<input class="u" value="' + esc(p.u) + '"></label><label>Einzelpreis (€)<input class="e" type="number" step="0.01" inputmode="decimal" value="' + esc(Math.round(p.e * 10000) / 10000) + '"></label></div><button class="sec" data-e="rm" style="width:100%;margin-top:4px">Position entfernen</button></div>';
+}
+function edSumme() { let s = 0; document.querySelectorAll('#fpos .pe').forEach(el => { s += Math.round(numE(el.querySelector('.q').value) * numE(el.querySelector('.e').value) * 100) / 100; }); const x = $('fsum'); if (x) x.textContent = fmt(s) + ' €'; }
+function formular(b) {
+  if (b === 'a') return inp('f_datum', 'Rechnungsdatum', D.datum, ' inputmode="numeric"') + ta('f_empf', 'Empfänger (Name und Anschrift)', D.empf) + inp('f_mail', 'E-Mail des Empfängers', D.mail, ' inputmode="email"') + inp('f_zeit', 'Leistungszeitraum', D.zeit, ' inputmode="numeric"') + inp('f_bereich', 'Bereich / Station', D.bereich);
+  if (b === 'b') return '<div id="fpos">' + D.P.map(posZeile).join('') + '</div><button class="sec" data-e="add" style="width:100%">+ Position hinzufügen</button><p class="tot">Rechnungsbetrag: <span id="fsum"></span></p>' + inp('f_faellig', 'Zahlbar bis', D.faellig, ' inputmode="numeric"');
+  return inp('f_name', 'Name', D.name) + ta('f_adr', 'Anschrift', D.adresse) + inp('f_tel', 'Telefon', D.tel) + inp('f_amail', 'E-Mail', D.absMail) + inp('f_st', 'Steuernummer', D.steuer) + inp('f_ko', 'Kontoinhaber', D.kontoinhaber) + inp('f_bank', 'Bank', D.bank) + inp('f_iban', 'IBAN', D.iban) + inp('f_bic', 'BIC', D.bic);
+}
+function starteAendern(b) {
+  if (done || editing) return;
+  if (!confirm('Möchtest du die Daten wirklich ändern?\n\nSie kommen sonst automatisch aus Stundenzettel, Kunden und Meine Daten. Die Änderung gilt nur für diese Rechnung.')) return;
+  editing = b;
+  $('f' + b).innerHTML = formular(b) + '<div class="actions"><button data-e="ok">Übernehmen</button><button class="sec" data-e="cancel">Abbrechen</button></div>';
+  $('f' + b).hidden = false; $('x' + b).hidden = true; $({ a: 'ba', b: 'bb', c: 'bc' }[b]).hidden = true;
+  if (b === 'b') edSumme();
+  buttons();
+}
+function beendeAendern(b) {
+  editing = null; $('f' + b).hidden = true; $('f' + b).innerHTML = ''; $('x' + b).hidden = false; $({ a: 'ba', b: 'bb', c: 'bc' }[b]).hidden = false;
+}
+async function uebernehmen(b) {
+  const v = id => $(id).value.trim();
+  if (b === 'a') {
+    if (!$('f_empf').value.trim()) { alert('Bitte den Empfänger eintragen.'); return; }
+    D.datum = v('f_datum'); D.empf = $('f_empf').value.trim(); D.mail = v('f_mail'); D.zeit = v('f_zeit'); D.bereich = v('f_bereich');
+  } else if (b === 'b') {
+    const P = [...document.querySelectorAll('#fpos .pe')].map(el => { const q = numE(el.querySelector('.q').value), e = numE(el.querySelector('.e').value); return { t: el.querySelector('.t').value.trim(), q, u: el.querySelector('.u').value.trim(), e, b: q * e }; }).filter(p => p.t);
+    if (!P.length) { alert('Bitte mindestens eine Leistung eintragen.'); return; }
+    D.P = P; D.sum = P.reduce((s, p) => s + Math.round(p.b * 100) / 100, 0); D.faellig = v('f_faellig');
+  } else {
+    D.name = v('f_name'); D.adresse = $('f_adr').value.trim(); D.tel = v('f_tel'); D.absMail = v('f_amail'); D.steuer = v('f_st'); D.kontoinhaber = v('f_ko'); D.bank = v('f_bank'); D.iban = v('f_iban'); D.bic = v('f_bic');
+  }
+  geaendert[b] = true; ok[b] = false; beendeAendern(b);
+  zeige(); $('aMail').href = RE.mailHref(D); zeigePdf();
+}
+['a', 'b', 'c'].forEach(k => $('f' + k).addEventListener('input', e => {
+  if (e.target.id === 'f_datum' || e.target.id === 'f_faellig') { if (e.target.selectionStart === e.target.value.length && /^[\d.]*$/.test(e.target.value)) { const n = fmtD(e.target.value); if (n !== e.target.value) e.target.value = n; } }
+  else if (e.target.id === 'f_zeit') { if (e.target.selectionStart === e.target.value.length && /^[\d.\s–—-]*$/.test(e.target.value)) { const n = fmtZ(e.target.value); if (n !== e.target.value) e.target.value = n; } }
+  if (k === 'b') edSumme();
+}));
+['a', 'b', 'c'].forEach(k => $('f' + k).addEventListener('click', e => {
+  const x = e.target.closest('button[data-e]'); if (!x) return;
+  if (x.dataset.e === 'ok') uebernehmen(k);
+  else if (x.dataset.e === 'cancel') { beendeAendern(k); buttons(); }
+  else if (x.dataset.e === 'rm') { x.closest('.pe').remove(); edSumme(); }
+  else if (x.dataset.e === 'add') { $('fpos').insertAdjacentHTML('beforeend', posZeile({ t: '', q: 1, u: 'Std.', e: 0 })); }
+}));
+document.querySelectorAll('.chg').forEach(b => b.addEventListener('click', () => starteAendern(b.dataset.b)));
 document.querySelectorAll('.conf').forEach(b => b.addEventListener('click', () => { ok[b.dataset.b] = !ok[b.dataset.b]; buttons(); }));
 $('aLater').onclick = () => abschliessen(false);
 $('aNow').onclick = () => abschliessen(true);
