@@ -22,7 +22,7 @@ main{max-width:640px;margin:0 auto;padding:16px}
 <p id="sich" class="bad" hidden></p>
 <a class="tile" href="stundenzettel.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><div class="t">Stundenzettel</div><div class="d">Zettel ausfüllen oder Foto einlesen</div></div></a>
 <a class="tile" href="rechnung.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg><div><div class="t">Neue Rechnung</div><div class="d">Aus dem Stundenzettel, als PDF oder per Mail</div></div></a>
-<a class="tile" href="rechnungen.html?f=alle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><div><div class="t">Rechnungen</div><div class="d" id="stat">Offen, erledigt, Zahlungserinnerung</div></div></a>
+<a class="tile" href="rechnungen.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><div><div class="t">Rechnungen</div><div class="d" id="stat">Offen, erledigt, Zahlungserinnerung</div></div></a>
 <a class="tile" href="adressbuch.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.8.2 4.5 2.2 4.5 5"/></svg><div><div class="t">Kunden</div><div class="d">Anschrift und Mailadresse der Auftraggeber</div></div></a>
 <a class="tile" href="meine-daten.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><div><div class="t">Meine Daten</div><div class="d">Anschrift, Bankverbindung, Zuschläge, Logo</div></div></a>
 <a class="tile" href="sicherung.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.5-9 6 6 0 0 1 11.5 1.5A3.8 3.8 0 0 1 17 18z"/><path d="M12 16v-6M9.5 12.5L12 10l2.5 2.5"/></svg><div><div class="t">Sicherung</div><div class="d">Daten sichern und wiederherstellen</div></div></a>
@@ -33,9 +33,14 @@ const rd = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } 
 const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const p = s => { const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
 const h = new Date(); h.setHours(0, 0, 0, 0);
-const offen = (rd('rechnungen') || []).filter(r => r.status !== 'erledigt');
+const alleR = rd('rechnungen') || [];
+const offen = alleR.filter(r => r.status === 'offen' && r.versandt);
+const neuR = alleR.filter(r => r.status === 'offen' && !r.versandt);
 const ue = offen.filter(r => { const f = p(r.faellig); return f && f < h; }).length;
-if (offen.length) $('stat').innerHTML = offen.length + ' offen (' + fmt(offen.reduce((a, r) => a + (r.summe || 0), 0)) + ' €)' + (ue ? ' · <span class="bad">' + ue + ' überfällig</span>' : '');
+const teile = [];
+if (offen.length) teile.push(offen.length + ' offen (' + fmt(offen.reduce((a, r) => a + (r.summe || 0), 0)) + ' €)' + (ue ? ' · <span class="bad">' + ue + ' überfällig</span>' : ''));
+if (neuR.length) teile.push(neuR.length + ' noch nicht verschickt');
+if (teile.length) $('stat').innerHTML = teile.join(' · ');
 const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch', 'geloeschtLog'];
 const z = K.map(k => localStorage.getItem(k) || '').join('|');
 const hs = s => { let x = 5381; for (let j = 0; j < s.length; j++) x = ((x << 5) + x + s.charCodeAt(j)) | 0; return String(x); };
