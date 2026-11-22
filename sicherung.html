@@ -51,7 +51,7 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #D9A400;outline-offset
 <script>
 const $ = id => document.getElementById(id);
 /* Sicherung */
-const KEYS = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
+const KEYS = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch', 'geloeschtLog'];
 function zustand() { return KEYS.map(k => localStorage.getItem(k) || '').join('|'); }
 function hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); }
 function info() { try { return JSON.parse(localStorage.getItem('sicherungInfo') || 'null'); } catch (e) { return null; } }

@@ -36,7 +36,7 @@ const h = new Date(); h.setHours(0, 0, 0, 0);
 const offen = (rd('rechnungen') || []).filter(r => r.status !== 'erledigt');
 const ue = offen.filter(r => { const f = p(r.faellig); return f && f < h; }).length;
 if (offen.length) $('stat').innerHTML = offen.length + ' offen (' + fmt(offen.reduce((a, r) => a + (r.summe || 0), 0)) + ' €)' + (ue ? ' · <span class="bad">' + ue + ' überfällig</span>' : '');
-const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch'];
+const K = ['stundenzettel', 'meineDaten', 'rechnungen', 'adressbuch', 'geloeschtLog'];
 const z = K.map(k => localStorage.getItem(k) || '').join('|');
 const hs = s => { let x = 5381; for (let j = 0; j < s.length; j++) x = ((x << 5) + x + s.charCodeAt(j)) | 0; return String(x); };
 const inf = rd('sicherungInfo');

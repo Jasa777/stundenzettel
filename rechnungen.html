@@ -32,7 +32,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid #D9A400;outline-offse
 .note{font-size:.85rem;color:var(--mut)}
 .ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
 .ov[hidden]{display:none}
-.sheet{background:var(--surf);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet{position:relative;background:var(--surf);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
 .sheet h2{margin:0 0 4px;font-size:1.2rem;color:var(--pri)}
 .stack{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .stack button{width:100%;min-height:48px}
@@ -41,6 +41,16 @@ button:focus-visible,.card:focus-visible{outline:3px solid #D9A400;outline-offse
 .vbar{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .vbar button{flex:1}
 #vf{flex:1;border:0;width:100%;background:#fff}
+.x{position:absolute;right:10px;top:10px;width:40px;min-height:40px;padding:0;border-radius:20px;font-size:1.1rem}
+.ed label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:8px}
+.ed input,.ed textarea{font:inherit;color:var(--ink);border:1px solid var(--line);padding:8px;width:100%}
+.ed h3{margin:14px 0 6px;font-size:1rem;color:var(--pri)}
+.pe{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--surf)}
+.pe .g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.ed .tot{font-weight:700;margin:8px 0}
+.logbox{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.logbox h2{font-size:1rem;margin:0 0 6px;color:var(--pri)}
+.logbox li{margin-bottom:3px}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
@@ -56,13 +66,20 @@ button:focus-visible,.card:focus-visible{outline:3px solid #D9A400;outline-offse
 </div>
 <p id="total" class="total"></p>
 <div id="list"></div>
+<div id="log" class="logbox" hidden></div>
 <a class="btn big" href="stundenzettel.html" style="margin-top:6px">+ Neue Rechnung beginnen</a>
 </main>
 
 <div class="ov" id="dlg" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dt">
+  <button class="sec x" id="dx" aria-label="Schließen">✕</button>
   <h2 id="dt">Was möchtest du tun?</h2>
   <p id="dsub" class="note"></p>
   <div class="stack" id="dbtn"></div>
+</div></div>
+
+<div class="ov full" id="editor" hidden><div class="vbox">
+  <div class="vbar"><button id="edSave">Speichern</button><button class="sec" id="edPrev">Vorschau</button><button class="sec" id="edClose">Abbrechen</button></div>
+  <div class="ed" id="edbody" style="overflow:auto;padding:12px;flex:1"></div>
 </div></div>
 
 <div class="ov full" id="viewer" hidden><div class="vbox">
@@ -99,6 +116,8 @@ function mailKopie(r) {   // bezahlte Rechnung: Kopie ohne Zahlungsaufforderung,
   return 'mailto:?subject=' + encodeURIComponent('Rechnung Nr. ' + r.nr + ' (Kopie)') + '&body=' + encodeURIComponent(body);
 }
 
+const GRUENDE = { erledigt: 'Rechnung erledigt', falsch: 'Rechnung falsch' };
+function logLade() { try { return JSON.parse(localStorage.getItem('geloeschtLog') || '[]') || []; } catch (e) { return []; } }
 function zeige() {
   const l = lade();
   document.querySelectorAll('.tabs button').forEach(b => {
@@ -109,10 +128,10 @@ function zeige() {
   const s = liste.reduce((a, o) => a + (o.r.summe || 0), 0);
   $('total').innerHTML = tab === 'alle' ? 'Alle Rechnungen: <strong>' + fmt(s) + ' €</strong>' : tab === 'offen' ? 'Noch offen: <strong>' + fmt(s) + ' €</strong>' : '';
   $('total').hidden = !$('total').innerHTML;
-  if (!liste.length) { $('list').innerHTML = '<p class="mut">Keine Rechnungen in diesem Register.</p>'; return; }
-  $('list').innerHTML = liste.map(({ r, i }) => {
+  if (!liste.length) $('list').innerHTML = '<p class="mut">Keine Rechnungen in diesem Register.</p>';
+  else $('list').innerHTML = liste.map(({ r, i }) => {
     const z = zustand(r), name = String(r.empfaenger || '').split('\n')[0];
-    const chip = z === 'geloescht' ? '<span class="chip bad">Gelöscht' + (r.geloeschtAm ? ' am ' + esc(r.geloeschtAm) : '') + '</span>'
+    const chip = z === 'geloescht' ? '<span class="chip bad">Gelöscht' + (r.geloeschtAm ? ' am ' + esc(r.geloeschtAm) : '') + '</span> <span class="chip offen">Grund: ' + esc(r.grund || '–') + '</span>'
       : z === 'erledigt' ? '<span class="chip ok">Bezahlt' + (r.bezahltAm ? ' am ' + esc(r.bezahltAm) : '') + '</span>'
       : z === 'neu' ? '<span class="chip offen">Noch nicht verschickt</span>'
       : '<span class="chip ' + (ueberfaellig(r) ? 'bad' : 'offen') + '">' + (ueberfaellig(r) ? 'Überfällig seit ' : 'Fällig am ') + esc(r.faellig || '–') + '</span>';
@@ -120,23 +139,37 @@ function zeige() {
     const betrag = (tab === 'erledigt' || tab === 'geloescht') ? '' : '<span class="sum">' + fmt(r.summe || 0) + ' €</span>';
     return '<div class="card" data-i="' + i + '" role="button" tabindex="0" aria-label="Rechnung ' + esc(r.nr) + ', Aktionen öffnen"><div class="row"><div class="pdfi">PDF</div><div class="grow"><div class="nr">' + esc(r.nr) + '</div><div class="mut">' + esc(name) + (r.zeitraum ? ' · ' + esc(r.zeitraum) : '') + '</div><div class="mut">Rechnung vom ' + esc(r.datum) + '</div></div>' + betrag + '</div><div style="margin-top:6px">' + chip + '</div>' + (knopf ? '<div class="actions">' + knopf + '</div>' : '') + '</div>';
   }).join('');
+  // Protokoll der gelöschten Rechnungsnummern mit Grund
+  const lb = $('log');
+  if (tab === 'geloescht') {
+    const eintraege = l.filter(r => r.status === 'geloescht').map(r => ({ nr: r.nr, grund: r.grund || '–', hinweis: '' }))
+      .concat(logLade().map(x => ({ nr: x.nr, grund: x.grund || '–', hinweis: ' (endgültig gelöscht' + (x.endgueltigAm ? ' am ' + x.endgueltigAm : '') + ')' })))
+      .sort((a, b) => String(a.nr).localeCompare(String(b.nr), 'de', { numeric: true }));
+    lb.hidden = !eintraege.length;
+    lb.innerHTML = '<h2>Rechnungsnummern und Grund</h2><ul style="margin:0;padding-left:18px">' + eintraege.map(x => '<li><strong>' + esc(x.nr) + '</strong> – ' + esc(x.grund) + '<span class="mut">' + esc(x.hinweis) + '</span></li>').join('') + '</ul>';
+  } else lb.hidden = true;
 }
 
 /* ----- Aktionsfenster ----- */
+const bt = (a, text, k) => '<button' + (k ? ' class="' + k + '"' : '') + ' data-d="' + a + '">' + text + '</button>';
 function frage(i) {
-  const r = lade()[i]; if (!r) return; sel = i;
-  const o = (a, t, k) => '<button' + (k ? ' class="' + k + '"' : '') + ' data-d="' + a + '">' + t + '</button>';
-  let txt = 'Was möchtest du tun?', b;
-  if (tab === 'geloescht') { txt = 'Möchtest du diese Rechnung wirklich löschen? Das kann nicht rückgängig gemacht werden. Rechnungen müssen meist mehrere Jahre aufbewahrt werden.'; b = o('endgueltig', 'Ja, endgültig löschen', 'del') + o('wieder', 'Wiederherstellen', 'sec') + o('nichts', 'Nein', 'sec'); }
-  else if (tab === 'offen') b = o('erinnerung', 'Zahlungserinnerung per Mail') + o('bezahlt', 'Bezahlt', 'sec') + o('pdf', 'PDF anzeigen / drucken', 'sec') + o('del', 'Löschen', 'del') + o('nichts', 'Nichts', 'sec');
-  else if (tab === 'erledigt') b = o('pdf', 'PDF anzeigen / drucken') + o('mailkopie', 'Verschicken (Kopie, ohne Empfänger)', 'sec') + o('wieder', 'Wieder auf offen setzen', 'sec') + o('del', 'Löschen', 'del') + o('nichts', 'Nichts', 'sec');
-  else b = o('pdf', 'PDF anzeigen / drucken') + o('mail', 'Verschicken (Mail vorbereiten)', 'sec') + o('del', 'Löschen', 'del') + o('nichts', 'Nichts', 'sec');
-  $('dt').textContent = tab === 'geloescht' ? 'Rechnung ' + r.nr : 'Rechnung ' + r.nr + ' – was möchtest du tun?';
-  $('dsub').textContent = tab === 'geloescht' ? txt : (r.absender ? 'Die Mail enthält nur den Text. Das PDF teilst du über „PDF anzeigen / drucken“.' : 'Für diese ältere Rechnung ist kein PDF möglich.');
+  const r = lade()[i]; if (!r) return; sel = i; const z = zustand(r);
+  let b, sub = 'Die Mail enthält nur den Text. Das PDF teilst du über „PDF anzeigen / drucken“.';
+  if (tab === 'geloescht') { b = bt('endgueltig', 'Endgültig löschen', 'del') + bt('wieder', 'Wiederherstellen', 'sec'); sub = 'Grund: ' + (r.grund || '–') + '. Beim endgültigen Löschen bleiben Rechnungsnummer und Grund im Protokoll erhalten.'; }
+  else if (tab === 'offen') b = bt('erinnerung', 'Zahlungserinnerung per Mail') + bt('pdf', 'PDF anzeigen / drucken', 'sec') + bt('del', 'Löschen', 'del');
+  else if (tab === 'erledigt') b = bt('pdf', 'PDF anzeigen / drucken') + bt('mailkopie', 'Verschicken (Kopie, ohne Empfänger)', 'sec') + bt('wieder', 'Verschieben zu Offen', 'sec') + bt('del', 'Löschen', 'del');
+  else b = bt('pdf', 'PDF anzeigen / drucken') + bt('mail', 'Verschicken (Mail vorbereiten)', 'sec') + (z === 'neu' ? bt('aendern', 'Rechnung ändern', 'sec') : '') + bt('del', 'Löschen', 'del');
+  $('dt').textContent = 'Rechnung ' + r.nr;
+  $('dsub').textContent = r.absender || tab === 'geloescht' ? sub : 'Für diese ältere Rechnung ist kein PDF möglich.';
   $('dbtn').innerHTML = b; $('dlg').hidden = false;
   if (!r.absender) $('dbtn').querySelectorAll('[data-d=pdf]').forEach(x => x.disabled = true);
 }
+function frageGrund(i) {
+  sel = i; $('dt').textContent = 'Warum wird die Rechnung gelöscht?'; $('dsub').textContent = 'Der Grund wird im Register „Gelöscht“ angezeigt. Mit ✕ brichst du das Löschen ab.';
+  $('dbtn').innerHTML = bt('grund-erledigt', GRUENDE.erledigt) + bt('grund-falsch', GRUENDE.falsch); $('dlg').hidden = false;
+}
 function zu() { $('dlg').hidden = true; sel = -1; }
+$('dx').onclick = zu;
 
 async function zeigePdf(r) {
   if (typeof PDFLib === 'undefined' || !window.RE) { alert('Für das PDF fehlen die Dateien pdf-lib.min.js und rechnung-pdf.js im GitHub-Ordner.'); return; }
@@ -158,20 +191,80 @@ $('dbtn').addEventListener('click', async e => {
   const b = e.target.closest('button[data-d]'); if (!b || b.disabled) return;
   const a = b.dataset.d, l = lade(), r = l[sel]; if (!r) { zu(); return; }
   const i = sel; zu();
-  if (a === 'nichts') return;
   if (a === 'pdf') { await zeigePdf(r); return; }
-  if (a === 'mail') { oeffneMail(RE.mailHref(RE.recToD(r))); return; }
+  if (a === 'mail') { oeffneMail(zustand(r) === 'erledigt' ? mailKopie(r) : RE.mailHref(RE.recToD(r))); return; }
   if (a === 'mailkopie') { oeffneMail(mailKopie(r)); return; }
   if (a === 'erinnerung') { oeffneMail(mailErinnerung(r)); return; }
-  if (a === 'bezahlt') { r.status = 'erledigt'; r.bezahltAm = heute(); }
-  else if (a === 'del') { r.vorher = { status: r.status, versandt: !!r.versandt }; r.status = 'geloescht'; r.geloeschtAm = heute(); }
+  if (a === 'aendern') { oeffneEditor(i); return; }
+  if (a === 'del') {
+    if (!confirm('Bist du sicher, dass du die Rechnung ' + r.nr + ' löschen möchtest?')) return;
+    if (!confirm('Bitte noch einmal bestätigen: Rechnung ' + r.nr + ' wirklich in „Gelöscht“ verschieben?')) return;
+    frageGrund(i); return;
+  }
+  if (a === 'grund-erledigt' || a === 'grund-falsch') {
+    r.vorher = { status: r.status, versandt: !!r.versandt }; r.status = 'geloescht'; r.geloeschtAm = heute(); r.grund = a === 'grund-erledigt' ? GRUENDE.erledigt : GRUENDE.falsch;
+  }
   else if (a === 'wieder') {
-    if (r.status === 'geloescht') { const v = r.vorher || {}; r.status = v.status || 'offen'; r.versandt = !!v.versandt; delete r.vorher; delete r.geloeschtAm; }
+    if (r.status === 'geloescht') { const v = r.vorher || {}; r.status = v.status || 'offen'; r.versandt = !!v.versandt; delete r.vorher; delete r.geloeschtAm; delete r.grund; }
     else { r.status = 'offen'; delete r.bezahltAm; r.versandt = true; }
   }
-  else if (a === 'endgueltig') { l.splice(i, 1); }
+  else if (a === 'endgueltig') {
+    if (!confirm('Rechnung ' + r.nr + ' endgültig löschen? Das kann nicht rückgängig gemacht werden. Rechnungen müssen meist mehrere Jahre aufbewahrt werden.')) return;
+    if (!confirm('Bist du dir wirklich sicher? Die Rechnung ' + r.nr + ' wird jetzt unwiderruflich gelöscht. Nur Nummer und Grund bleiben im Protokoll.')) return;
+    try { const log = logLade(); log.push({ nr: r.nr, grund: r.grund || '–', geloeschtAm: r.geloeschtAm || '', endgueltigAm: heute() }); localStorage.setItem('geloeschtLog', JSON.stringify(log)); } catch (er) { alert('Das Protokoll konnte nicht gespeichert werden. Die Rechnung wurde nicht gelöscht.'); return; }
+    l.splice(i, 1);
+  }
   sichern(l); zeige();
 });
+
+/* ----- Rechnung ändern (nur solange nicht verschickt) ----- */
+let edit = -1;
+const numE = v => parseFloat(String(v == null ? '' : v).replace(',', '.')) || 0;
+function fmtD(v) { const d = String(v).replace(/\D/g, '').slice(0, 8); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2}\.\d{2})(\d)/, '$1.$2'); }
+function fmtZ(v) { const p = String(v).split(/\s*[–—-]\s*/); if (p.length > 1) return fmtD(p[0]) + ' – ' + fmtD(p.slice(1).join('')); const d = String(v).replace(/\D/g, '').slice(0, 16), a = fmtD(d.slice(0, 8)), b = fmtD(d.slice(8)); return b ? a + ' – ' + b : a; }
+function posZeile(p) {
+  return '<div class="pe"><label>Leistung<input class="t" value="' + esc(p.t) + '"></label><div class="g"><label>Menge<input class="q" type="number" step="0.01" inputmode="decimal" value="' + esc(p.q) + '"></label><label>Einheit<input class="u" value="' + esc(p.u) + '"></label><label>Einzelpreis (€)<input class="e" type="number" step="0.01" inputmode="decimal" value="' + esc(Math.round(p.e * 10000) / 10000) + '"></label></div><button class="del" data-e="rm" style="width:100%">Position entfernen</button></div>';
+}
+function edSumme() { let s = 0; document.querySelectorAll('#edbody .pe').forEach(el => { s += Math.round(numE(el.querySelector('.q').value) * numE(el.querySelector('.e').value) * 100) / 100; }); const x = $('edsum'); if (x) x.textContent = fmt(s) + ' €'; }
+function oeffneEditor(i) {
+  const r = lade()[i]; if (!r || zustand(r) !== 'neu') return; edit = i; const a = r.absender || {};
+  const inp = (id, lab, v, ex) => '<label>' + lab + '<input id="' + id + '" value="' + esc(v) + '"' + (ex || '') + '></label>';
+  $('edbody').innerHTML = '<h2 style="margin:0 0 4px">Rechnung ' + esc(r.nr) + ' ändern</h2><p class="note">Die Rechnungsnummer lässt sich hier nicht ändern. Nach dem Markieren als „Verschickt“ ist keine Änderung mehr möglich.</p>' +
+    inp('ed_datum', 'Rechnungsdatum', r.datum, ' inputmode="numeric"') + inp('ed_faellig', 'Zahlbar bis', r.faellig, ' inputmode="numeric"') + inp('ed_zeit', 'Leistungszeitraum', r.zeitraum, ' inputmode="numeric"') + inp('ed_bereich', 'Bereich / Station', r.bereich || '') +
+    '<label>Empfänger (Name und Anschrift)<textarea id="ed_empf" rows="3">' + esc(r.empfaenger || '') + '</textarea></label>' + inp('ed_mail', 'E-Mail des Empfängers', r.mail || '', ' inputmode="email"') +
+    '<h3>Leistungen</h3><div id="edpos">' + (r.positionen || []).map(posZeile).join('') + '</div><button class="sec" data-e="add" style="width:100%">+ Position hinzufügen</button><p class="tot">Rechnungsbetrag: <span id="edsum"></span></p>' +
+    '<details><summary style="font-weight:600;color:var(--pri);margin:10px 0">Absender und Bankverbindung</summary>' +
+    inp('ed_aname', 'Name', a.name || '') + '<label>Anschrift<textarea id="ed_aadr" rows="3">' + esc(a.adresse || '') + '</textarea></label>' + inp('ed_atel', 'Telefon', a.tel || '') + inp('ed_amail', 'E-Mail', a.mail || '') + inp('ed_ast', 'Steuernummer', a.steuer || '') + inp('ed_ako', 'Kontoinhaber', a.kontoinhaber || '') + inp('ed_aban', 'Bank', a.bank || '') + inp('ed_aiban', 'IBAN', a.iban || '') + inp('ed_abic', 'BIC', a.bic || '') + '</details>';
+  edSumme(); $('editor').hidden = false; $('edbody').scrollTop = 0;
+}
+function edRec() {
+  const l = lade(), r = Object.assign({}, l[edit]);
+  const P = [...document.querySelectorAll('#edbody .pe')].map(el => { const q = numE(el.querySelector('.q').value), e = numE(el.querySelector('.e').value); return { t: el.querySelector('.t').value.trim(), q, u: el.querySelector('.u').value.trim(), e, b: q * e }; }).filter(p => p.t);
+  const v = id => $(id).value.trim();
+  r.datum = v('ed_datum'); r.faellig = v('ed_faellig'); r.zeitraum = v('ed_zeit'); r.bereich = v('ed_bereich'); r.empfaenger = $('ed_empf').value.trim(); r.mail = v('ed_mail');
+  r.positionen = P; r.summe = Math.round(P.reduce((s, p) => s + Math.round(p.b * 100) / 100, 0) * 100) / 100;
+  r.absender = Object.assign({}, r.absender, { name: v('ed_aname'), adresse: $('ed_aadr').value.trim(), tel: v('ed_atel'), mail: v('ed_amail'), steuer: v('ed_ast'), kontoinhaber: v('ed_ako'), bank: v('ed_aban'), iban: v('ed_aiban'), bic: v('ed_abic') });
+  return r;
+}
+$('edbody').addEventListener('input', e => {
+  if (e.target.id === 'ed_datum' || e.target.id === 'ed_faellig') { if (e.target.selectionStart === e.target.value.length && /^[\d.]*$/.test(e.target.value)) { const n = fmtD(e.target.value); if (n !== e.target.value) e.target.value = n; } }
+  else if (e.target.id === 'ed_zeit') { if (e.target.selectionStart === e.target.value.length && /^[\d.\s–—-]*$/.test(e.target.value)) { const n = fmtZ(e.target.value); if (n !== e.target.value) e.target.value = n; } }
+  edSumme();
+});
+$('edbody').addEventListener('click', e => {
+  const b = e.target.closest('button[data-e]'); if (!b) return;
+  if (b.dataset.e === 'rm') { b.closest('.pe').remove(); edSumme(); }
+  else if (b.dataset.e === 'add') { $('edpos').insertAdjacentHTML('beforeend', posZeile({ t: '', q: 1, u: 'Std.', e: 0 })); }
+});
+$('edClose').onclick = () => { if (confirm('Änderungen verwerfen?')) { $('editor').hidden = true; edit = -1; } };
+$('edPrev').onclick = () => { const r = edRec(); if (!r.positionen.length) { alert('Bitte mindestens eine Leistung eintragen.'); return; } zeigePdf(r); };
+$('edSave').onclick = () => {
+  const r = edRec();
+  if (!r.positionen.length) { alert('Bitte mindestens eine Leistung eintragen.'); return; }
+  if (!r.empfaenger) { alert('Bitte den Empfänger eintragen.'); return; }
+  const l = lade(); if (!l[edit] || zustand(l[edit]) !== 'neu') { alert('Diese Rechnung kann nicht mehr geändert werden.'); return; }
+  r.geaendertAm = heute(); l[edit] = r; if (sichern(l)) { $('editor').hidden = true; edit = -1; zeige(); }
+};
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) zu(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { zu(); } });
 
@@ -179,7 +272,10 @@ $('list').addEventListener('click', e => {
   const k = e.target.closest('button[data-a]');
   if (k) {
     const l = lade(), r = l[+k.closest('.card').dataset.i]; if (!r) return;
-    if (k.dataset.a === 'versandt') { r.versandt = true; r.versandtAm = heute(); }
+    if (k.dataset.a === 'versandt') {
+      if (!confirm('Rechnung ' + r.nr + ' als verschickt markieren?\n\nAb dann kann sie nicht mehr geändert werden. Bist du sicher?')) return;
+      r.versandt = true; r.versandtAm = heute();
+    }
     else if (k.dataset.a === 'bezahlt') { r.status = 'erledigt'; r.bezahltAm = heute(); }
     sichern(l); zeige(); return;
   }
