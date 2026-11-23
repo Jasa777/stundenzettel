@@ -97,7 +97,7 @@ h2 .chip{font-size:.72rem;vertical-align:middle;margin-left:6px}
         <button class="big" id="aLater">1. Speichern und später verschicken</button>
         <button class="big" id="aNow">2. Speichern und jetzt verschicken</button>
       </div>
-      <p class="note">Die Rechnung wandert in Rechnungen. Danach bekommt die nächste Rechnung automatisch die nächste Nummer, und der Stundenzettel wird geleert.</p>
+      <p class="note">Die Rechnung wandert in die Übersicht. Danach bekommt die nächste Rechnung automatisch die nächste Nummer, und der Stundenzettel wird geleert.</p>
     </div>
     <p id="fertig" style="color:var(--ok);font-weight:600"></p>
     <div id="senden" hidden>
@@ -109,7 +109,7 @@ h2 .chip{font-size:.72rem;vertical-align:middle;margin-left:6px}
       <p class="note">Die Mail enthält nur den Text. Speichere das PDF zuerst und hänge es in der Mail-App an.</p>
     </div>
     <div class="actions" id="nach" hidden>
-      <a class="btn" href="rechnungen.html">Zu Rechnungen</a>
+      <a class="btn" href="rechnungen.html">Zur Übersicht</a>
       <a class="btn sec" href="index.html">Zur Startseite</a>
     </div>
   </section>
@@ -238,7 +238,7 @@ function abschliessen(jetzt) {
     localStorage.setItem('meineDaten', JSON.stringify(md));
     localStorage.removeItem('stundenzettel');
     done = true;
-    $('fertig').textContent = 'Rechnung ' + D.nr + ' ist in Rechnungen gespeichert. Die nächste Rechnungsnummer ist ' + md.mRechnungsnr + '. Der Stundenzettel wurde geleert.' + (jetzt ? ' Jetzt kannst du die Rechnung verschicken. Tippe danach in Rechnungen auf „Verschickt“, sobald du die Mail abgeschickt hast.' : ' Du findest sie dort zum späteren Verschicken.');
+    $('fertig').textContent = 'Rechnung ' + D.nr + ' ist in der Übersicht gespeichert. Die nächste Rechnungsnummer ist ' + md.mRechnungsnr + '. Der Stundenzettel wurde geleert.' + (jetzt ? ' Jetzt kannst du die Rechnung verschicken. Tippe danach in der Übersicht auf „Verschickt“, sobald du die Mail abgeschickt hast.' : ' Du findest sie dort zum späteren Verschicken.');
     $('senden').hidden = !jetzt; $('nach').hidden = false;
   } catch (e) { $('fertig').textContent = 'Speichern auf diesem Gerät war nicht möglich.'; }
   buttons();
