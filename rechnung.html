@@ -6,6 +6,10 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#1F5A3A">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SemiraCareOffice">
+<script src="boot.js"></script>
 <title>Rechnung</title>
 <style>
 *{box-sizing:border-box}
@@ -104,9 +108,15 @@ h2 .chip{font-size:.72rem;vertical-align:middle;margin-left:6px}
       <div class="actions">
         <button id="aShare">PDF speichern / teilen</button>
         <button class="sec" id="aOpen">Drucken / PDF öffnen</button>
-        <a class="btn sec" id="aMail" href="#">Mail vorbereiten</a>
+        <button class="sec" id="aMailPdf">Mail mit PDF (Teilen)</button>
+        <a class="btn sec" id="aMail" href="#">Mail nur Text</a>
       </div>
       <p class="note">Die Mail enthält nur den Text. Speichere das PDF zuerst und hänge es in der Mail-App an.</p>
+    </div>
+    <div id="sichBox" hidden>
+      <p class="note">Deine Daten liegen nur auf diesem Gerät. Speichere jetzt eine Sicherung, zum Beispiel im gemeinsamen iCloud-Ordner.</p>
+      <button class="sec" id="aSich">Jetzt sichern</button>
+      <p id="sichMsg" class="note"></p>
     </div>
     <div class="actions" id="nach" hidden>
       <a class="btn" href="rechnungen.html">Zur Übersicht</a>
@@ -239,7 +249,7 @@ function abschliessen(jetzt) {
     localStorage.removeItem('stundenzettel');
     done = true;
     $('fertig').textContent = 'Rechnung ' + D.nr + ' ist in der Übersicht gespeichert. Die nächste Rechnungsnummer ist ' + md.mRechnungsnr + '. Der Stundenzettel wurde geleert.' + (jetzt ? ' Jetzt kannst du die Rechnung verschicken. Tippe danach in der Übersicht auf „Verschickt“, sobald du die Mail abgeschickt hast.' : ' Du findest sie dort zum späteren Verschicken.');
-    $('senden').hidden = !jetzt; $('nach').hidden = false;
+    $('senden').hidden = !jetzt; $('nach').hidden = false; $('sichBox').hidden = false;
   } catch (e) { $('fertig').textContent = 'Speichern auf diesem Gerät war nicht möglich.'; }
   buttons();
 }
@@ -308,6 +318,11 @@ document.querySelectorAll('.chg').forEach(b => b.addEventListener('click', () =>
 document.querySelectorAll('.conf').forEach(b => b.addEventListener('click', () => { ok[b.dataset.b] = !ok[b.dataset.b]; buttons(); }));
 $('aLater').onclick = () => abschliessen(false);
 $('aNow').onclick = () => abschliessen(true);
+$('aSich').onclick = async () => { const s = await AppBackup.sichern(); $('sichMsg').textContent = s === 'ok' ? 'Sicherung gespeichert.' : s === 'abbruch' ? '' : 'Die Sicherung konnte nicht gespeichert werden.'; };
+$('aMailPdf').onclick = async () => {
+  const s = await RE.mailShare(D);
+  if (s === null) { alert('Auf diesem Gerät lässt sich das PDF nicht direkt teilen. Es wird nur der Mailtext geöffnet. Speichere das PDF und hänge es an.'); location.href = RE.mailHref(D); }
+};
 $('aOpen').onclick = () => { if (pdfUrl) window.open(pdfUrl, '_blank'); };
 $('aShare').onclick = async () => {
   if (!pdfBlob) return;

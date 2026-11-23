@@ -6,6 +6,10 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#1F5A3A">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SemiraCareOffice">
+<script src="boot.js"></script>
 <title>Übersicht</title>
 <style>
 *{box-sizing:border-box}
@@ -162,7 +166,7 @@ function frage(i) {
   if (z === 'geloescht') { b = bt('pdf', 'PDF anzeigen / drucken') + bt('wieder', 'Wiederherstellen', 'sec') + bt('endgueltig', 'Endgültig löschen', 'del'); sub = 'Grund: ' + (r.grund || '–') + '. Beim endgültigen Löschen verschwindet die Rechnung aus dem Register, Nummer, Grund und PDF bleiben im Archiv darunter erhalten.'; }
   else if (z === 'offen') b = (ueberfaellig(r) ? bt('erinnerung', 'Zahlungserinnerung per Mail') : '') + bt('pdf', 'PDF anzeigen / drucken', ueberfaellig(r) ? 'sec' : '') + bt('del', 'Löschen', 'del');
   else if (z === 'erledigt') b = bt('pdf', 'PDF anzeigen / drucken') + bt('wieder', 'Verschieben zu Offen', 'sec') + bt('del', 'Löschen', 'del');
-  else b = bt('pdf', 'PDF anzeigen / drucken') + bt('mail', 'Verschicken (Mail vorbereiten)', 'sec') + bt('aendern', 'Rechnung ändern', 'sec') + bt('del', 'Löschen', 'del');
+  else b = bt('pdf', 'PDF anzeigen / drucken') + bt('mailpdf', 'Verschicken (Mail mit PDF)', 'sec') + bt('mail', 'Verschicken (nur Text, mit Adresse)', 'sec') + bt('aendern', 'Rechnung ändern', 'sec') + bt('del', 'Löschen', 'del');
   $('dt').textContent = 'Rechnung ' + r.nr;
   $('dsub').textContent = (r.absender || z === 'geloescht') ? sub : 'Für diese ältere Rechnung ist kein PDF möglich.';
   $('dbtn').innerHTML = b; $('dlg').hidden = false;
@@ -197,6 +201,7 @@ $('dbtn').addEventListener('click', async e => {
   const i = sel; zu();
   if (a === 'pdf') { await zeigePdf(r); return; }
   if (a === 'mail') { oeffneMail(RE.mailHref(RE.recToD(r))); return; }
+  if (a === 'mailpdf') { const D = RE.recToD(r), s = await RE.mailShare(D); if (s === null) { alert('Auf diesem Gerät lässt sich das PDF nicht direkt teilen. Es wird nur der Mailtext geöffnet.'); oeffneMail(RE.mailHref(D)); } return; }
   if (a === 'erinnerung') { oeffneMail(mailErinnerung(r)); return; }
   if (a === 'aendern') { oeffneEditor(i); return; }
   if (a === 'del') {

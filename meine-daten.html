@@ -6,6 +6,10 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#1F5A3A">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SemiraCareOffice">
+<script src="boot.js"></script>
 <title>Meine Daten</title>
 <style>
 *{box-sizing:border-box}
@@ -17,7 +21,7 @@ h2{font-size:1.05rem;margin:0 0 10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .full{grid-column:1/-1}
 label{display:block;font-size:.88rem;color:var(--mut)}
-input,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);padding:8px;width:100%}
+input,textarea,select{font:inherit;color:var(--ink);border:1px solid var(--line);padding:8px;width:100%}
 button,.btn{font:inherit;font-weight:600;cursor:pointer}
 button{background:var(--pri);color:var(--pri-ink);border:0;padding:9px 14px}
 button.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
@@ -73,9 +77,18 @@ input[type=color]{height:44px;padding:3px}
     <label>Zuschlag Wochenende (%)<input id="mZuWe" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 25"></label>
     <label>Zuschlag Feiertag (%)<input id="mZuFt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 100"></label>
     <label>Kilometersatz (€ je km)<input id="mKmSatz" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 0,30"></label>
+    <label>Bundesland (für Feiertage im Stundenzettel)<select id="mBundesland"><option value="">– nicht gewählt –</option><option value="BW">Baden-Württemberg</option><option value="BY">Bayern</option><option value="BE">Berlin</option><option value="BB">Brandenburg</option><option value="HB">Bremen</option><option value="HH">Hamburg</option><option value="HE">Hessen</option><option value="MV">Mecklenburg-Vorpommern</option><option value="NI">Niedersachsen</option><option value="NW">Nordrhein-Westfalen</option><option value="RP">Rheinland-Pfalz</option><option value="SL">Saarland</option><option value="SN">Sachsen</option><option value="ST">Sachsen-Anhalt</option><option value="SH">Schleswig-Holstein</option><option value="TH">Thüringen</option></select></label>
     <label>Zahlungsziel (Tage)<input id="mTage" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 14"></label>
   </div>
   <p class="note">Der Stundenlohn und die Zuschläge werden im Stundenzettel vorausgefüllt und können dort für einen Auftrag geändert werden.</p>
+</section>
+
+<section id="sperre">
+  <h2>App-Sperre</h2>
+  <p class="note" id="sStatus"></p>
+  <div id="sForm"></div>
+  <p id="sMsg" class="note" role="status"></p>
+  <p class="note">Der Code gilt nur für dieses Gerät und ist nicht in der Sicherung enthalten. Die App sperrt sich nach 5 Minuten ohne Nutzung und beim Neustart.</p>
 </section>
 
 <section>
@@ -93,7 +106,7 @@ input[type=color]{height:44px;padding:3px}
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const KEYS = ['mName','mMailName','mAdresse','mTel','mMail','mSteuer','mKontoinhaber','mBank','mIban','mBic','mStundenlohn','mZuNacht','mZuWe','mZuFt','mKmSatz','mTage','mFarbe'];
+const KEYS = ['mName','mMailName','mAdresse','mTel','mMail','mSteuer','mKontoinhaber','mBank','mIban','mBic','mStundenlohn','mZuNacht','mZuWe','mZuFt','mKmSatz','mTage','mBundesland','mFarbe'];
 let o = {};
 try { o = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
 KEYS.forEach(k => { if (o[k] !== undefined && o[k] !== '') $(k).value = o[k]; });
@@ -117,6 +130,47 @@ $('mRechnungsnr').addEventListener('change', () => {
   if (ok) { o.mRechnungsnr = neu; sichern(); $('nrMsg').textContent = 'Die nächste Rechnungsnummer ist jetzt ' + neu + '.'; }
   else { $('mRechnungsnr').value = alt; $('nrMsg').textContent = 'Die Nummer wurde nicht geändert. Es bleibt ' + alt + '.'; }
 });
+
+/* ---------- App-Sperre einstellen ---------- */
+function sperreUI(nachricht) {
+  const L = window.AppLock, box = $('sForm'); if (!L) return;
+  const an = L.isSet(), msg = t => { $('sMsg').textContent = t || ''; };
+  const f = (id, lab) => '<label>' + lab + '<input id="' + id + '" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>';
+  const ok4 = v => /^\d{4}$/.test(v);
+  $('sStatus').textContent = an ? 'Die Sperre ist eingeschaltet (4-stelliger Code).' : 'Die Sperre ist ausgeschaltet.';
+  msg(nachricht);
+  if (!an) {
+    box.innerHTML = f('p_neu', 'Neuer Code (4 Ziffern)') + f('p_neu2', 'Code wiederholen') + '<button id="p_on">Sperre einschalten</button>';
+    $('p_on').onclick = async () => {
+      const a = $('p_neu').value, b = $('p_neu2').value;
+      if (!ok4(a)) return msg('Bitte genau 4 Ziffern eingeben.');
+      if (a !== b) return msg('Die beiden Codes sind nicht gleich.');
+      await L.setPin(a); sperreUI('Die Sperre ist eingeschaltet.');
+    };
+  } else {
+    box.innerHTML = '<div class="actions"><button class="sec" id="p_chg">Code ändern</button><button class="sec" id="p_off">Sperre ausschalten</button></div>';
+    $('p_chg').onclick = () => {
+      box.innerHTML = f('p_alt', 'Alter Code') + f('p_neu', 'Neuer Code (4 Ziffern)') + f('p_neu2', 'Neuen Code wiederholen') + '<div class="actions"><button id="p_ok">Code ändern</button><button class="sec" id="p_no">Abbrechen</button></div>';
+      $('p_no').onclick = () => sperreUI();
+      $('p_ok').onclick = async () => {
+        if (!(await L.verify($('p_alt').value))) return msg('Der alte Code ist falsch.');
+        const a = $('p_neu').value;
+        if (!ok4(a)) return msg('Bitte genau 4 Ziffern eingeben.');
+        if (a !== $('p_neu2').value) return msg('Die beiden neuen Codes sind nicht gleich.');
+        await L.setPin(a); sperreUI('Der Code wurde geändert.');
+      };
+    };
+    $('p_off').onclick = () => {
+      box.innerHTML = f('p_alt', 'Aktueller Code') + '<div class="actions"><button id="p_ok">Sperre ausschalten</button><button class="sec" id="p_no">Abbrechen</button></div>';
+      $('p_no').onclick = () => sperreUI();
+      $('p_ok').onclick = async () => {
+        if (!(await L.verify($('p_alt').value))) return msg('Der Code ist falsch.');
+        L.clearPin(); sperreUI('Die Sperre ist ausgeschaltet.');
+      };
+    };
+  }
+}
+window.addEventListener('DOMContentLoaded', () => sperreUI());
 
 async function logoLaden(file) {
   const bmp = await createImageBitmap(file);

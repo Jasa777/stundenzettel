@@ -120,5 +120,11 @@ function recToD(rec) {
     P: rec.positionen || [], sum: rec.summe || 0, name: a.name || md.mName || '', mailName: md.mMailName || '', adresse: a.adresse || '', tel: a.tel || '', absMail: a.mail || '', steuer: a.steuer || '',
     kontoinhaber: a.kontoinhaber || '', bank: a.bank || '', iban: a.iban || '', bic: a.bic || '', farbe: a.farbe || md.mFarbe || '#1F5A3A', logo: md.logo || '' };
 }
-window.RE = { pdf: baueRechnungPdf, mailHref, pdfName, recToD };
+async function mailShare(D) {
+  const blob = await baueRechnungPdf(D), file = new File([blob], pdfName(D), { type: 'application/pdf' });
+  const href = mailHref(D), body = decodeURIComponent(href.split('&body=')[1] || ''), subject = 'Rechnung Nr. ' + D.nr;
+  if (!(navigator.canShare && navigator.canShare({ files: [file] }))) return null;
+  try { await navigator.share({ files: [file], title: subject, text: body }); return true; } catch (e) { if (e && e.name === 'AbortError') return false; return null; }
+}
+window.RE = { pdf: baueRechnungPdf, mailHref, mailShare, pdfName, recToD };
 })();
