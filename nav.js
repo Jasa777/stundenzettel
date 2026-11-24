@@ -23,7 +23,7 @@
 
 /* ---------- App-Sperre, Version, Betrieb ohne Netz ---------- */
 (function () {
-  var VERSION = '2026-11-23.2', LOCK_MS = 5 * 60000;
+  var VERSION = '2026-11-24.1', LOCK_MS = 5 * 60000;
   window.APP_VERSION = VERSION;
   var ls = window.localStorage, ss = window.sessionStorage;
   function pinSet() { try { return !!ls.getItem('pinHash'); } catch (e) { return false; } }

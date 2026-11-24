@@ -1,7 +1,7 @@
 /* Zwischenspeicher für den Betrieb ohne Netz. Netz zuerst, damit Updates sofort ankommen. */
-const V = 'sco-2026-11-23-2';
+const V = 'sco-2026-11-24-1';
 const CORE = ['index.html', 'stundenzettel.html', 'rechnung.html', 'rechnungen.html', 'adressbuch.html', 'meine-daten.html', 'sicherung.html',
-  'style.css', 'nav.js', 'boot.js', 'pdf-lib.min.js', 'rechnung-pdf.js', 'logo-mark.png', 'icon.png', 'manifest.json'];
+  'style.css', 'nav.js', 'boot.js', 'plz.js', 'pdf-lib.min.js', 'rechnung-pdf.js', 'logo-mark.png', 'icon.png', 'manifest.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => Promise.all(CORE.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))).then(() => self.skipWaiting()));
 });

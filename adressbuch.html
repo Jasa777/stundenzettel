@@ -22,7 +22,7 @@ h1{font-size:1.7rem;margin:8px 0 2px}
 section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
 h2{font-size:1.05rem;margin:0 0 10px}
 label{display:block;font-size:.88rem;color:var(--mut);margin-bottom:10px}
-input,textarea{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
+input,textarea,select{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
 button{font:inherit;font-weight:600;background:var(--pri);color:var(--pri-ink);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
 button.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)}
 button.del{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
@@ -51,6 +51,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   <h2 id="ft">Neuer Kunde</h2>
   <label>Name / Einrichtung<input id="name" autocomplete="off"></label>
   <label>Anschrift (Straße, PLZ Ort)<textarea id="adr" rows="3"></textarea></label>
+  <label>Bundesland (wird aus PLZ und Ort erkannt, für die Feiertage)<select id="land"><option value="">– nicht erkannt –</option><option value="BW">Baden-Württemberg</option><option value="BY">Bayern</option><option value="BE">Berlin</option><option value="BB">Brandenburg</option><option value="HB">Bremen</option><option value="HH">Hamburg</option><option value="HE">Hessen</option><option value="MV">Mecklenburg-Vorpommern</option><option value="NI">Niedersachsen</option><option value="NW">Nordrhein-Westfalen</option><option value="RP">Rheinland-Pfalz</option><option value="SL">Saarland</option><option value="SN">Sachsen</option><option value="ST">Sachsen-Anhalt</option><option value="SH">Schleswig-Holstein</option><option value="TH">Thüringen</option></select></label>
+  <p class="note" id="landInfo" style="margin:-4px 0 10px"></p>
   <label>E-Mail für Rechnungen<input id="mail" type="email" inputmode="email" autocomplete="off"></label>
   <label>Telefon (optional)<input id="tel" inputmode="tel" autocomplete="off"></label>
   <label>Bereich / Station (optional)<input id="bereich" autocomplete="off"></label>
@@ -63,14 +65,21 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 </section>
 </main>
 
+<script src="plz.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let edit = null;
+let edit = null, landManuell = false;
+function landHinweis() {
+  const l = $('land').value, d = PLZ.detect($('adr').value);
+  $('landInfo').textContent = !$('adr').value.trim() ? '' : l ? (landManuell ? 'Von Hand gewählt. Zum automatischen Erkennen „– nicht erkannt –“ wählen.' : 'Automatisch erkannt. An Landesgrenzen bitte kurz prüfen.') : 'Bundesland nicht erkannt. Bitte PLZ und Ort in die Anschrift schreiben oder das Bundesland wählen.';
+}
+$('adr').addEventListener('input', () => { if (!landManuell) $('land').value = PLZ.detect($('adr').value); landHinweis(); });
+$('land').addEventListener('change', () => { landManuell = !!$('land').value; if (!landManuell) $('land').value = PLZ.detect($('adr').value); landHinweis(); });
 function lade() { try { return JSON.parse(localStorage.getItem('adressbuch') || '[]'); } catch (e) { return []; } }
 function sichern(l) { try { localStorage.setItem('adressbuch', JSON.stringify(l)); return true; } catch (e) { $('msg').textContent = 'Speichern war nicht möglich.'; return false; } }
 
-function leeren() { edit = null; ['name', 'adr', 'mail', 'tel', 'bereich', 'km'].forEach(k => $(k).value = ''); $('ft').textContent = 'Neuer Kunde'; $('cancel').hidden = true; }
+function leeren() { edit = null; ['name', 'adr', 'mail', 'tel', 'bereich', 'km', 'land'].forEach(k => $(k).value = ''); landManuell = false; landHinweis(); $('ft').textContent = 'Neuer Kunde'; $('cancel').hidden = true; }
 
 function zeige() {
   const q = $('q').value.trim().toLowerCase();
@@ -78,7 +87,7 @@ function zeige() {
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
   $('list').innerHTML = l.length ? l.map(k => `<div class="card">
     <div class="hl"><span class="av">${esc(k.name.charAt(0).toUpperCase())}</span><div class="nm">${esc(k.name)}</div></div>
-    <div class="mut">${esc(k.adresse)}${k.mail ? '\n' + esc(k.mail) : ''}${k.tel ? '\nTel.: ' + esc(k.tel) : ''}${k.bereich ? '\nBereich / Station: ' + esc(k.bereich) : ''}${k.km ? '\nKilometer: ' + esc(k.km) : ''}</div>
+    <div class="mut">${esc(k.adresse)}${k.mail ? '\n' + esc(k.mail) : ''}${k.tel ? '\nTel.: ' + esc(k.tel) : ''}${k.bereich ? '\nBereich / Station: ' + esc(k.bereich) : ''}${k.km ? '\nKilometer: ' + esc(k.km) : ''}${(k.land || PLZ.detect(k.adresse)) ? '\nBundesland: ' + esc(PLZ.NAMEN[k.land || PLZ.detect(k.adresse)]) : ''}</div>
     <div class="actions"><button class="sec" data-a="e" data-id="${esc(k.id)}">Bearbeiten</button><button class="del" data-a="d" data-id="${esc(k.id)}">Löschen</button></div>
   </div>`).join('') : '<p class="mut">' + (q ? 'Nichts gefunden.' : 'Noch kein Kunde gespeichert.') + '</p>';
 }
@@ -87,7 +96,7 @@ $('save').onclick = () => {
   const name = $('name').value.trim();
   if (!name) { $('msg').textContent = 'Bitte einen Namen eintragen.'; $('name').focus(); return; }
   const l = lade();
-  const k = { id: edit || String(Date.now()), name, adresse: $('adr').value.trim(), mail: $('mail').value.trim(), tel: $('tel').value.trim(), bereich: $('bereich').value.trim(), km: $('km').value.trim() };
+  const k = { id: edit || String(Date.now()), name, adresse: $('adr').value.trim(), mail: $('mail').value.trim(), tel: $('tel').value.trim(), bereich: $('bereich').value.trim(), km: $('km').value.trim(), land: $('land').value, landManuell };
   const i = l.findIndex(x => x.id === k.id);
   if (i >= 0) l[i] = k; else l.push(k);
   if (sichern(l)) { $('msg').textContent = '„' + name + '“ gespeichert.'; leeren(); zeige(); }
@@ -98,7 +107,7 @@ $('list').addEventListener('click', e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const l = lade(), k = l.find(x => x.id === b.dataset.id); if (!k) return;
   if (b.dataset.a === 'e') {
-    edit = k.id; $('name').value = k.name; $('adr').value = k.adresse; $('mail').value = k.mail; $('tel').value = k.tel || ''; $('bereich').value = k.bereich || ''; $('km').value = k.km || '';
+    edit = k.id; $('name').value = k.name; $('adr').value = k.adresse; $('mail').value = k.mail; $('tel').value = k.tel || ''; $('bereich').value = k.bereich || ''; $('km').value = k.km || ''; landManuell = !!k.landManuell; $('land').value = k.land || PLZ.detect(k.adresse); landHinweis();
     $('ft').textContent = 'Kunde bearbeiten'; $('cancel').hidden = false; $('msg').textContent = ''; $('ft').scrollIntoView(); $('name').focus();
   } else if (confirm('„' + k.name + '“ wirklich löschen? Bereits gespeicherte Rechnungen bleiben unverändert.')) {
     sichern(l.filter(x => x.id !== k.id)); if (edit === k.id) leeren(); zeige();

@@ -77,7 +77,6 @@ input[type=color]{height:44px;padding:3px}
     <label>Zuschlag Wochenende (%)<input id="mZuWe" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 25"></label>
     <label>Zuschlag Feiertag (%)<input id="mZuFt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 100"></label>
     <label>Kilometersatz (€ je km)<input id="mKmSatz" type="number" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 0,30"></label>
-    <label>Bundesland (für Feiertage im Stundenzettel)<select id="mBundesland"><option value="">– nicht gewählt –</option><option value="BW">Baden-Württemberg</option><option value="BY">Bayern</option><option value="BE">Berlin</option><option value="BB">Brandenburg</option><option value="HB">Bremen</option><option value="HH">Hamburg</option><option value="HE">Hessen</option><option value="MV">Mecklenburg-Vorpommern</option><option value="NI">Niedersachsen</option><option value="NW">Nordrhein-Westfalen</option><option value="RP">Rheinland-Pfalz</option><option value="SL">Saarland</option><option value="SN">Sachsen</option><option value="ST">Sachsen-Anhalt</option><option value="SH">Schleswig-Holstein</option><option value="TH">Thüringen</option></select></label>
     <label>Zahlungsziel (Tage)<input id="mTage" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 14"></label>
   </div>
   <p class="note">Der Stundenlohn und die Zuschläge werden im Stundenzettel vorausgefüllt und können dort für einen Auftrag geändert werden.</p>
@@ -106,7 +105,7 @@ input[type=color]{height:44px;padding:3px}
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const KEYS = ['mName','mMailName','mAdresse','mTel','mMail','mSteuer','mKontoinhaber','mBank','mIban','mBic','mStundenlohn','mZuNacht','mZuWe','mZuFt','mKmSatz','mTage','mBundesland','mFarbe'];
+const KEYS = ['mName','mMailName','mAdresse','mTel','mMail','mSteuer','mKontoinhaber','mBank','mIban','mBic','mStundenlohn','mZuNacht','mZuWe','mZuFt','mKmSatz','mTage','mFarbe'];
 let o = {};
 try { o = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
 KEYS.forEach(k => { if (o[k] !== undefined && o[k] !== '') $(k).value = o[k]; });

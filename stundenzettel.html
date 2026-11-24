@@ -88,6 +88,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
     <label class="full">Kunde aus dem Adressbuch wählen (<a href="adressbuch.html">Kunden verwalten</a>)<select id="kunde"><option value="">– keine Auswahl –</option></select></label>
     <label>Zeitraum<input id="zeitraum" placeholder="TT.MM.JJJJ – TT.MM.JJJJ" inputmode="numeric"></label>
     <label class="full">Auftraggeber (Name und Anschrift)<textarea id="auftraggeber" rows="3"></textarea></label>
+    <p class="hint full" id="landInfo" style="margin:-4px 0 4px"></p>
     <label>Auftragnehmer<input id="auftragnehmer"></label>
     <label>Bereich / Station<input id="bereich"></label>
     <label>Kilometer für die Rechnung<input id="km" type="number" min="0" step="0.1" inputmode="decimal"></label>
@@ -130,6 +131,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="plz.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const rowsEl = $('rows');
@@ -266,12 +268,23 @@ function feiertage(y, land) {
   if (land === 'SN') { const b = new Date(y, 10, 22); while (b.getDay() !== 3) b.setDate(b.getDate() - 1); add(b.getMonth() + 1, b.getDate()); }
   return S;
 }
+/* Bundesland für die Feiertage: aus dem gewählten Kunden, sonst aus PLZ und Ort der Anschrift */
+function aktuellesLand() {
+  const id = $('kunde').value;
+  if (id) { const k = (window.kundenListe || []).find(x => x.id === id); if (k) return k.land || PLZ.detect(k.adresse); }
+  return PLZ.detect($('auftraggeber').value);
+}
+function landInfo() {
+  const l = aktuellesLand();
+  $('landInfo').textContent = l ? 'Bundesland für die Feiertage: ' + PLZ.NAMEN[l] + ($('kunde').value ? ' (im Adressbuch änderbar)' : '') : 'Bundesland nicht erkannt: Feiertage werden nicht automatisch gesetzt. Bitte PLZ und Ort in die Anschrift schreiben.';
+}
+function alleTage() { document.querySelectorAll('#rows tr').forEach(autoWe); landInfo(); calc(); save(); }
 function autoWe(tr) {
   const d = tr.querySelector('.d').value.split('.');
   if (d.length !== 3 || d[2].length !== 4) return;
   const dt = new Date(+d[2], +d[1] - 1, +d[0]);
   if (dt.getDate() !== +d[0] || dt.getMonth() !== +d[1] - 1) return;
-  let land = ''; try { land = (JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}).mBundesland || ''; } catch (e) {}
+  const land = aktuellesLand();
   if (!tr.dataset.weManual) tr.querySelector('.we').checked = dt.getDay() === 0 || dt.getDay() === 6;
   if (!tr.dataset.ftManual && land) tr.querySelector('.ft').checked = feiertage(dt.getFullYear(), land).has(d[1] + '-' + d[0]);
 }
@@ -427,19 +440,21 @@ function fuelleKunden() {
   $('kunde').innerHTML = '<option value="">– keine Auswahl –</option>' + l.map(k => '<option value="' + k.id + '">' + k.name.replace(/[&<>"]/g, '') + '</option>').join('');
   return l;
 }
-const kundenListe = fuelleKunden();
+const kundenListe = window.kundenListe = fuelleKunden();
 $('kunde').addEventListener('change', () => {
   const k = kundenListe.find(x => x.id === $('kunde').value); if (!k) return;
   $('auftraggeber').value = k.name + (k.adresse ? '\n' + k.adresse : '');
   $('bereich').value = k.bereich || ''; $('km').value = k.km || '';
-  calc(); save();
+  alleTage();
 });
+$('auftraggeber').addEventListener('input', () => { if (!$('kunde').value) alleTage(); else landInfo(); });
 function zeigeRnr() {
   let m = {}; try { m = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
   $('rnr').value = m.mRechnungsnr || (new Date().getFullYear() + '-001');
 }
 zeigeRnr();
 load(); while (rowsEl.children.length < 2) addRow();
+landInfo();
 function prefillStandard() {
   let m = {}; try { m = JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}; } catch (e) {}
   [['auftragnehmer', 'mName'], ['lohn', 'mStundenlohn'], ['zNacht', 'mZuNacht'], ['zWe', 'mZuWe'], ['zFt', 'mZuFt']].forEach(([id, k]) => { if (!$(id).value && m[k] !== undefined && m[k] !== '') $(id).value = m[k]; });
