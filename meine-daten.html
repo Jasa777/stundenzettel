@@ -28,6 +28,8 @@ button.sec{background:transparent;color:var(--pri);border:1.5px solid var(--pri)
 input[type=color]{height:44px;padding:3px}
 #file{position:absolute;opacity:0;width:1px;height:1px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.pe{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .note{font-size:.88rem;color:var(--mut)}
 #ok{color:var(--ok);font-weight:600;min-height:1.4em}
 #lp{max-height:70px;max-width:220px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px}
@@ -80,6 +82,13 @@ input[type=color]{height:44px;padding:3px}
     <label>Zahlungsziel (Tage)<input id="mTage" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 14"></label>
   </div>
   <p class="note">Der Stundenlohn und die Zuschläge werden im Stundenzettel vorausgefüllt und können dort für einen Auftrag geändert werden.</p>
+</section>
+
+<section id="schicht">
+  <h2>Schicht-Vorlagen</h2>
+  <p class="note">Lege hier deine üblichen Dienste an, zum Beispiel Frühdienst oder Nachtdienst. Im Stundenzettel trägst du sie mit einem Tipp ein.</p>
+  <div id="sList"></div>
+  <button class="sec" id="sAdd" type="button">+ Vorlage hinzufügen</button>
 </section>
 
 <section id="sperre">
@@ -170,6 +179,17 @@ function sperreUI(nachricht) {
   }
 }
 window.addEventListener('DOMContentLoaded', () => sperreUI());
+
+/* ---------- Schicht-Vorlagen ---------- */
+const escH = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function schichtUI() {
+  const l = o.mSchichten || [];
+  $('sList').innerHTML = l.length ? l.map((s, i) => '<div class="pe"><label>Name<input data-s="n" data-i="' + i + '" value="' + escH(s.n) + '" placeholder="z. B. Frühdienst"></label><div class="g3"><label>von<input type="time" data-s="v" data-i="' + i + '" value="' + escH(s.v) + '"></label><label>bis<input type="time" data-s="b" data-i="' + i + '" value="' + escH(s.b) + '"></label><label>Pause (Min.)<input type="number" min="0" step="1" inputmode="numeric" data-s="p" data-i="' + i + '" value="' + escH(s.p) + '"></label></div><button class="del" type="button" data-sdel="' + i + '">Vorlage entfernen</button></div>').join('') : '<p class="note">Noch keine Vorlage angelegt.</p>';
+}
+$('sAdd').onclick = () => { o.mSchichten = (o.mSchichten || []).concat([{ n: '', v: '', b: '', p: '30' }]); sichern(); schichtUI(); };
+$('sList').addEventListener('input', e => { const k = e.target.dataset.s; if (!k) return; o.mSchichten[+e.target.dataset.i][k] = e.target.value; sichern(); });
+$('sList').addEventListener('click', e => { const b = e.target.closest('[data-sdel]'); if (!b) return; o.mSchichten.splice(+b.dataset.sdel, 1); sichern(); schichtUI(); });
+schichtUI();
 
 async function logoLaden(file) {
   const bmp = await createImageBitmap(file);

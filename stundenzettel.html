@@ -60,6 +60,9 @@ details{margin-top:12px}
 summary{cursor:pointer;font-weight:600;color:var(--pri)}
 textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%;margin:8px 0}
 @media print{body{background:#fff;color:#000}.noprint{display:none}tr::after{display:none}section{border:0;padding:0}input{border:0;border-bottom:1px solid #999;border-radius:0;background:#fff!important}}
+#schichten{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+#schichten button{padding:6px 12px;min-height:44px;flex-direction:column;line-height:1.2}
+#schichten small{font-weight:400}
 </style>
 <link rel="stylesheet" href="style.css">
 <script src="nav.js" defer></script>
@@ -101,6 +104,7 @@ textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--surf);b
 
 <section>
   <h2>Einsätze</h2>
+  <div id="schichten" class="noprint"></div>
   <p class="hint noprint">Zum Löschen einen Einsatz nach links wischen. Die Einsätze werden nach dem Datum sortiert.</p>
   <div class="wrap">
   <div class="hd"><span>Datum</span><span>von</span><span>bis</span></div>
@@ -462,6 +466,35 @@ function prefillStandard() {
 }
 prefillStandard();
 calc();
+
+/* Schicht-Vorlagen aus Meine Daten: ein Tipp trägt den Dienst ein */
+let schichtListe = [];
+function zeigeSchichten() {
+  try { schichtListe = ((JSON.parse(localStorage.getItem('meineDaten') || '{}') || {}).mSchichten || []).filter(s => s.v && s.b); } catch (e) { schichtListe = []; }
+  const q = s => String(s || '').replace(/[&<>"]/g, '');
+  $('schichten').innerHTML = schichtListe.length ? schichtListe.map((s, i) => '<button type="button" class="sec" data-s="' + i + '">' + q(s.n || 'Schicht') + '<small>' + q(s.v) + '–' + q(s.b) + '</small></button>').join('') : '<span class="hint">Schicht-Vorlagen legst du in <a href="meine-daten.html">Meine Daten</a> an.</span>';
+}
+function naechsterTag() {
+  let max = null;
+  rowsEl.querySelectorAll('.d').forEach(i => { const m = i.value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); if (m) { const d = new Date(+m[3], +m[2] - 1, +m[1]); if (!max || d > max) max = d; } });
+  if (!max) return '';
+  max.setDate(max.getDate() + 1);
+  return String(max.getDate()).padStart(2, '0') + '.' + String(max.getMonth() + 1).padStart(2, '0') + '.' + max.getFullYear();
+}
+$('schichten').addEventListener('click', e => {
+  const b = e.target.closest('button[data-s]'); if (!b) return;
+  const s = schichtListe[+b.dataset.s]; if (!s) return;
+  // 1. Zeile mit Datum, aber ohne Zeiten (Datum bleibt); 2. sonst erste freie Zeile mit dem Folgetag
+  const ohneZeit = x => !x.querySelector('.v').value && !x.querySelector('.b').value;
+  let tr = [...rowsEl.children].find(x => x.querySelector('.d').value && ohneZeit(x)), dat;
+  if (tr) dat = tr.querySelector('.d').value;
+  else { tr = [...rowsEl.children].find(x => !zeileVoll(x)) || addRow(); dat = naechsterTag(); }
+  tr.querySelector('.d').value = dat; tr.querySelector('.v').value = s.v; tr.querySelector('.b').value = s.b; tr.querySelector('.p').value = s.p || '';
+  autoWe(tr); sortRows();
+  tr.scrollIntoView({ block: 'center' });
+  if (!dat) tr.querySelector('.d').focus();
+});
+zeigeSchichten();
 </script>
 </body>
 </html>
